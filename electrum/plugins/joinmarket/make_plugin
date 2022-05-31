@@ -1,0 +1,170 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os
+import shutil
+import hashlib
+import tempfile
+import json
+import zipfile
+import zipimport
+
+import click
+
+
+BASE_PATH = os.path.dirname(os.path.realpath(__file__))
+PLUGIN_NAME = os.path.basename(BASE_PATH)
+BASE_DIR = os.path.dirname(BASE_PATH)
+BASE_DIR_LEN = len(BASE_DIR)
+
+
+class ChdirTemporaryDirectory(object):
+    """Create tmp dir, chdir to it and remove on exit"""
+    def __enter__(self):
+        self.prev_wd = os.getcwd()
+        self.name = tempfile.mkdtemp()
+        os.chdir(self.name)
+        return self.name
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        os.chdir(self.prev_wd)
+        shutil.rmtree(self.name)
+
+
+class App(object):
+
+    def __init__(self, **kwargs):
+        self.download_url = kwargs.pop('download_url')
+        if (self.download_url
+                and not self.download_url.lower().endswith('.zip')
+                and not self.download_url.endswith('/')):
+            self.download_url += '/'
+        self.update_json_file = kwargs.pop('update_json_file')
+        self.verbose = kwargs.pop('verbose', False)
+        self.cwd = os.getcwd()
+
+    def make_plugin(self):
+        with ChdirTemporaryDirectory() as tmpdir:
+            pdir = self.prepare_plugin_dir(tmpdir)
+            zip_path = self.make_zip(pdir)
+            metadata = self.read_metadata(zip_path)
+            self.rename_zip_file(zip_path, metadata)
+            if self.update_json_file:
+                self.update_json(metadata)
+            else:
+                print('Metadata:\n', json.dumps(metadata, indent=4))
+
+    def make_zip(self, pdir):
+        zip_path = os.path.join(BASE_PATH, f'{PLUGIN_NAME}.zip')
+        if os.path.exists(zip_path):
+            os.unlink(zip_path)
+
+        added_files = 0
+        with zipfile.ZipFile(zip_path, 'w') as zip_object:
+            for folder_name, sub_folders, file_names in os.walk(pdir):
+                for filename in file_names:
+                    file_path = os.path.join(folder_name, filename)
+                    dest_path = os.path.join(
+                        PLUGIN_NAME,
+                        os.path.relpath(folder_name, pdir),
+                        os.path.basename(file_path))
+                    zip_object.write(file_path, dest_path)
+                    added_files += 1
+                    if self.verbose:
+                        print('Added', dest_path)
+        if not self.verbose:
+            print(f'Added {added_files} files to {zip_path}')
+        return zip_path
+
+    def read_hash(self, zip_path):
+        with open(zip_path, 'rb') as f:
+            s = f.read()
+        return bytes(hashlib.sha256(s).digest()).hex()
+
+    def read_metadata(self, zip_path):
+        phash = self.read_hash(zip_path)
+        zip_file = zipimport.zipimporter(zip_path)
+        module = zip_file.load_module(PLUGIN_NAME)
+        if self.download_url:
+            download_url = self.download_url
+        else:
+            download_url = module.download_url
+        if (self.download_url
+                and not self.download_url.lower().endswith('.zip')):
+            download_url = f'{download_url}/{PLUGIN_NAME}-{module.version}.zip'
+        metadata = {
+            'hash': phash,
+            'description': module.description,
+            'display_name': module.fullname,
+            'available_for': module.available_for,
+            'download_url': download_url,
+            'author': module.author,
+            'licence': module.licence,
+            'version': module.version,
+        }
+        return metadata
+
+    def rename_zip_file(self, zip_path, metadata):
+        version = metadata.get('version')
+        if version:
+            split_zip_path = os.path.splitext(zip_path)
+            new_zip_path = f'{split_zip_path[0]}-{version}.zip'
+            os.rename(zip_path, new_zip_path)
+            print(f'Renamed to {new_zip_path}')
+
+    def update_json(self, metadata):
+        json_path = self.update_json_file
+        if os.path.isabs(json_path):
+            json_path = os.path.normpath(json_path)
+        else:
+            json_path = os.path.normpath(os.path.join(self.cwd, json_path))
+        print('json_path', json_path)
+        if not json_path.endswith('electrum/plugins.json'):
+            print('Wrong path to plugins.json ignored: ', json_path)
+            return
+        if not os.path.isfile(json_path):
+            print('File not found: ', json_path)
+            return
+        with open(json_path, 'r') as f:
+            s = f.read()
+        try:
+            json_data = json.loads(s)
+        except Exception:
+            json_data = {}
+        json_data[PLUGIN_NAME] = metadata
+        with open(json_path, 'w') as f:
+            f.write(json.dumps(json_data, indent=4))
+
+    def prepare_plugin_dir(self, tmpdir):
+        pdir = os.path.join(tmpdir, PLUGIN_NAME)
+        for foldername, subfolders, filenames in os.walk(BASE_PATH):
+            if '__pycache__' in foldername or 'tests' in foldername:
+                continue
+            subdirname = foldername[BASE_DIR_LEN+1:]
+            tmpdirname = os.path.join(tmpdir, subdirname)
+            os.mkdir(tmpdirname)
+            # print(f'created\t{tmpdirname}')
+            for fname in filenames:
+                if not fname.endswith('.py'):
+                    continue
+                srcfname = os.path.join(foldername, fname)
+                dstfname = os.path.join(tmpdirname, fname)
+                # print(f'copied\t{dstfname}')
+                shutil.copy(srcfname, dstfname)
+        return pdir
+
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.option('-u', '--download-url', help='plugin download url')
+@click.option('-f', '--update-json-file', help='update plugins.json file')
+@click.option('-v', '--verbose', is_flag=True, help='Verbose output')
+def main(**kwargs):
+    app = App(**kwargs)
+    app.make_plugin()
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,56 @@
+-------------------------------------------------------------------------------
+plugin:
+    - check onion/IRC single/multiple password/no passdword join
+    - make_keypairs_cache logger.info not shown in Qt log
+    - jm_qt_obwatch: sorting by columns, filter by text
+
+    - remove addrask from scheule?
+    - save last shedule tx as done to wallet schedule when confirmed
+
+    - потрібно якось документувати
+
+    - irc reconnect interval 5 sec -> change to progressive interval
+    - jm_wallet.py: look where to add save_db
+    - change message on JMDLG.shutdown:
+      > 62.08 | I | J/plugins.joinmarket.jm_main.JMManager.[wallet_jm] |
+        Lost IRC connection to: irc1.dword.ga . Should reconnect automatically soon.
+    - окремий пункт до якого я взагалі ще не дійшов це qml gui
+    - unsupported/disabled JMManager -- do not add `jm_*` in the wallet
+    - не може підібрати ордери, таке періодично трапляється при низькому
+      значенні maker_timeout_sec -- раніше вистачало 3, зараз замало 5 і процес
+      підбору запускається до того як `ordebookwatch.py` додає ордери
+    - коли yieldgenerator запускається після ob-watcher.py дані по fidelity
+      bond відсутні
+    - коли IRC сервер запускається після зупинки треба через деякий час
+      відсилати повторний запит по OBWatch -- makers не шлють offers
+      після reconnect
+Qt:
+    - AttributeError: 'NoneType' object has no attribute 'aborted' on early tx
+      abort during multiple join
+tests:
+    - jm_utils: add_txin_sig: add testing for p2sh-p2wpkh
+    - verify_txin_sig: scriptsig wrong DER length: 70
+    - tests: place back test_walletservice.py, test_wallet.py?,
+      test_tx_creation
+    - tests: look to base code test/jmclient/test_coinjoin.py
+        test/unified/test_e2e_coinjoin.py
+    - tests sometimes fail with fallet file "if..." left after fail
+    - ну і так... покриття тестами як завжди неповне...
+-------------------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/max/tmp/electrum/electrum/electrum/plugins/joinmarket/jm_qt.py", line 1359, in _takerFinished
+    tumbler_taker_finished_update(self.taker, tumble_log,
+  File "/home/max/tmp/electrum/electrum/electrum/plugins/joinmarket/jmclient/taker_utils.py", line 462, in tumbler_taker_finished_update
+    hramt = taker.cjamount
+AttributeError: 'Taker' object has no attribute 'cjamount'
+
+мда, це цікаве питання -- трейс після перезапуску гаманця, тому у Taker не встановлене cjamount
+
+see plugin notes if left: save last shedule tx as done to wallet schedule when confirmed
+-------------------------------------------------------------------------------
+блін, транзакції з низьким fee позалипали без блоків, тепер у makers немає
+liquidity
+
+це до речі можлива DOS атака на makers
+на makers треба перевіряти tx fee по поточним feerate
+-------------------------------------------------------------------------------

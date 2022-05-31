@@ -1,0 +1,27 @@
+Make PR to base: Taker.push: notify_addr is unused from 0.5.5
+
+Make PR to base: joinmarket-qt.py: # extract raw text before processing... rm
+
+Make PR to base: joinmarket-qt.py: selectSchedule firstarg -> firstarg[0]
+
+Make PR to base: on_connect trigger is not called from irc code,
+was earlier in IRCMessageChannel.__handle_line
+
+???test_commands: JMTestServerProtocol.on_JM_FILL no call to defaultCallbacks
+same on test_client_protocol: on_JM_FILL
+
+Make PR to base: need break in `for target in dest_and_amounts` if amount == 0
+
+jmclient.validate_address use in qt (returns tuple but check True in if)
+-------------------------------------------------------------------------------
+qt: "Restart tumbler schedule" cancel then abort raises exception
+Traceback (most recent call last):
+  File "/home/joinmarket-clientserver/joinmarket-clientserver/./scripts/joinmarket-qt.py", line 1141, in abortTransactions
+    self.taker.aborted = True
+AttributeError: 'NoneType' object has no attribute 'aborted'
+-------------------------------------------------------------------------------
+2024-10-03 11:36:34+0300 [-] Spawning tor process with DataDirectory /tmp/tortmphzmc1aec
+2024-10-03 11:34:47+0300 [-] Unhandled Error
+	Traceback (most recent call last):
+	Failure: twisted.internet.error.ConnectError: An error occurred while connecting: 2: No such file or directory.
+-------------------------------------------------------------------------------

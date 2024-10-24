@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v1
       - name: Set outputs for pkg_ver
         run: |
-          export ELECTRUM_VERSION=`./contrib/print_electrum_version.py
+          export ELECTRUM_VERSION=`./contrib/print_electrum_version.py`
           echo "::set-output name=pkg_ver::$(echo $ELECTRUM_VERSION)"
       - name: build AppImage
         run: |
@@ -75,4 +75,42 @@ jobs:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: dist/electrum-${{ github.ref_name }}-x86_64.AppImage
           asset_name: electrum-${{ github.ref_name }}-x86_64.AppImage
+          asset_content_type: application/octet-stream
+
+  build_win:
+    needs: create_release
+    runs-on: ubuntu-20.04
+    name: create build for win
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: build win files
+        run: |
+          ./contrib/build-wine/build.sh
+      - name: Upload standalone Win exe
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: contrib/build-wine/dist/electrum-${{ github.ref_name }}.exe
+          asset_name: electrum-${{ github.ref_name }}.exe
+          asset_content_type: application/octet-stream
+      - name: Upload portable Win exe
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: contrib/build-wine/dist/electrum-${{ github.ref_name }}-portable.exe
+          asset_name: electrum-${{ github.ref_name }}-portable.exe
+          asset_content_type: application/octet-stream
+      - name: Upload setup for Win
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: contrib/build-wine/dist/electrum-${{ github.ref_name }}-setup.exe
+          asset_name: electrum-${{ github.ref_name }}-setup.exe
           asset_content_type: application/octet-stream

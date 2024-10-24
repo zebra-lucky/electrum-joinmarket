@@ -1,0 +1,34 @@
+name: Build release workflow
+
+on:
+  push:
+    tags:
+    - '*'
+
+jobs:
+  create_release:
+    runs-on: ubuntu-20.04
+    name: Create github release
+    outputs:
+      upload_url: >
+        ${{ steps.get_release.outputs.upload_url ||
+            steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Try to Get Release
+        id: get_release
+        uses: zebra-lucky/actions-js-getRelease@0.0.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag: ${{ github.ref }}
+      - name: Create Release
+        id: create_release
+        if: ${{ !steps.get_release.outputs.upload_url }}
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false

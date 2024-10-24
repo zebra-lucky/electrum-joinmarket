@@ -33,6 +33,30 @@ jobs:
           draft: false
           prerelease: false
 
+  build_sdist:
+    needs: create_release
+    runs-on: ubuntu-20.04
+    name: create build for sdist
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Set outputs for pkg_ver
+        run: |
+          export ELECTRUM_VERSION=`./contrib/print_electrum_version.py
+          echo "::set-output name=pkg_ver::$(echo $ELECTRUM_VERSION)"
+      - name: build AppImage
+        run: |
+          ./contrib/build-linux/sdist/build.sh
+      - name: Upload sdist Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: dist/Electrum-${{ steps.set_vars.outputs.pkg_ver }}.tar.gz
+          asset_name: Electrum-${{ github.ref_name }}.tar.gz
+          asset_content_type: application/octet-stream
+
   build_appimage:
     needs: create_release
     runs-on: ubuntu-20.04

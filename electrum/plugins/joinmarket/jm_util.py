@@ -5,7 +5,8 @@ import logging
 import re
 from enum import IntEnum
 
-from electrum import ecc
+import electrum_ecc as ecc
+
 from electrum import constants
 from electrum.bitcoin import sha256d, address_to_script, is_address, opcodes
 from electrum.descriptor import (PubkeyProvider, PKHDescriptor, WPKHDescriptor,

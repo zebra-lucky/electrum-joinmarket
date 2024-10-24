@@ -9,7 +9,8 @@ import json
 import pytest
 import os
 
-from electrum import ecc
+import electrum_ecc as ecc
+
 from electrum.plugins.joinmarket import jmbitcoin as btc
 from electrum.plugins.joinmarket.jmbase import bintohex
 

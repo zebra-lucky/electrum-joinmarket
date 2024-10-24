@@ -7,7 +7,7 @@ import hashlib
 import struct
 from pprint import pformat
 
-from electrum.ecc import ECPubkey, ECPrivkey
+import electrum_ecc as ecc
 
 from ..jmbitcoin import (multiply, add_pubkeys, getG, podle_PublicKey,
                          podle_PrivateKey, N, podle_PublicKey_class)
@@ -110,7 +110,7 @@ class PoDLE(object):
             k = os.urandom(32)
         k_int = int.from_bytes(k, byteorder='big')
         J = getNUMS(self.i)
-        KG = ECPubkey(ECPrivkey(k).get_public_key_bytes())
+        KG = ecc.ECPubkey(ecc.ECPrivkey(k).get_public_key_bytes())
         KJ = multiply(k_int, J.get_public_key_bytes(), return_serialized=False)
         self.P2 = getP2(self.priv, J)
         self.get_commitment()

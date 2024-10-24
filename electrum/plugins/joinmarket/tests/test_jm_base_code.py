@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from electrum.ecc import ECPrivkey, InvalidECPointException
+import electrum_ecc as ecc
+
 from electrum.transaction import Transaction
 from electrum.util import bfh, TxMinedInfo
 from electrum.plugins.joinmarket.jmbase import utxostr_to_utxo
@@ -29,7 +30,7 @@ class JMBaseCodeMixinTestCase(JMTestCase):
 
     async def test_mk_freeze_script(self):
         jmw = self.jmw
-        privk = ECPrivkey.generate_random_key()
+        privk = ecc.ECPrivkey.generate_random_key()
         pubk_bytes = privk.get_public_key_bytes()
         locktime = 500000000 + 1723833376  # 16 Aug 2024, 18:36:16 UTC
         script = jmw.mk_freeze_script(pubk_bytes, locktime)
@@ -44,7 +45,7 @@ class JMBaseCodeMixinTestCase(JMTestCase):
             script = jmw.mk_freeze_script(locktime, locktime)
 
         bad_pubk_bytes = b'\x02' + b'\x05'*32
-        with self.assertRaises(InvalidECPointException):
+        with self.assertRaises(ecc.InvalidECPointException):
             script = jmw.mk_freeze_script(bad_pubk_bytes, locktime)
 
     async def test_redeem_script_to_p2wsh_script(self):

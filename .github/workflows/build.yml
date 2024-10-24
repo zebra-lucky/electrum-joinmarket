@@ -32,3 +32,23 @@ jobs:
           release_name: ${{ github.ref }}
           draft: false
           prerelease: false
+
+  build_appimage:
+    needs: create_release
+    runs-on: ubuntu-20.04
+    name: create build for Linux AppImage
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: build AppImage
+        run: |
+          ./contrib/build-linux/appimage/build.sh
+      - name: Upload AppImage Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: dist/*.AppImage
+          asset_name: electrum-${{ github.ref_name }}.AppImage
+          asset_content_type: application/octet-stream

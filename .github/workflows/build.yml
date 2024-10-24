@@ -65,11 +65,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v1
-      - name: Set outputs for pkg_ver
-        id: set_vars
-        run: |
-          export ELECTRUM_VERSION=`./contrib/print_electrum_version.py`
-          echo "::set-output name=pkg_ver::$(echo $ELECTRUM_VERSION)"
       - name: Build dmg
         run: |
           ./contrib/osx/make_osx.sh
@@ -79,8 +74,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: dist/electrum-${{ steps.set_vars.outputs.pkg_ver }}.dmg
-          asset_name: electrum-${{ steps.set_vars.outputs.pkg_ver }}.dmg
+          asset_path: dist/electrum-${{ github.ref_name }}-unsigned.dmg
+          asset_name: electrum-${{ github.ref_name }}-unsigned.dmg
           asset_content_type: application/apple-diskimage
 
   build_appimage:

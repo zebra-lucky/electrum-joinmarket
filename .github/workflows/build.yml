@@ -49,6 +49,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: dist/*.AppImage
-          asset_name: electrum-${{ github.ref_name }}.AppImage
+          asset_path: dist/electrum-${{ github.ref_name }}-x86_64.AppImage
+          asset_name: electrum-${{ github.ref_name }}-x86_64.AppImage
           asset_content_type: application/octet-stream

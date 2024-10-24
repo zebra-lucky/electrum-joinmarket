@@ -3,10 +3,9 @@
 import base64
 from typing import List, Tuple, Union
 
-from electrum import ecc
+import electrum_ecc as ecc
+
 from electrum.bitcoin import sha256d, usermessage_magic
-from electrum.ecc import (ECPrivkey, ECPubkey, ecdsa_der_sig_from_r_and_s,
-                          ecdsa_sig64_from_der_sig)
 from electrum.util import to_bytes
 
 from ..jmbase import bintohex
@@ -25,20 +24,20 @@ def getG(compressed=True):
     return ecc.GENERATOR.get_public_key_bytes(compressed)
 
 
-podle_PublicKey_class = ECPubkey
-podle_PrivateKey_class = ECPrivkey
+podle_PublicKey_class = ecc.ECPubkey
+podle_PrivateKey_class = ecc.ECPrivkey
 
 
-def podle_PublicKey(P: bytes) -> ECPubkey:
+def podle_PublicKey(P: bytes) -> ecc.ECPubkey:
     """Returns a PublicKey object from a binary string
     """
-    return ECPubkey(P)
+    return ecc.ECPubkey(P)
 
 
-def podle_PrivateKey(priv: bytes) -> ECPrivkey:
+def podle_PrivateKey(priv: bytes) -> ecc.ECPrivkey:
     """Returns a PrivateKey object from a binary string
     """
-    return ECPrivkey(priv)
+    return ecc.ECPrivkey(priv)
 
 
 def read_privkey(priv: bytes) -> Tuple[bool, bytes]:
@@ -54,14 +53,14 @@ def read_privkey(priv: bytes) -> Tuple[bool, bytes]:
     return (compressed, priv[:32])
 
 
-def privkey_to_pubkey(priv: bytes) -> ECPubkey:
+def privkey_to_pubkey(priv: bytes) -> ecc.ECPubkey:
     '''Take 32/33 byte raw private key as input.
     If 32 bytes, return as uncompressed raw public key.
     If 33 bytes and the final byte is 01, return
     compresse public key. Else throws Exception.'''
     compressed, priv = read_privkey(priv)
-    privk = ECPrivkey(priv)
-    return ECPubkey(privk.get_public_key_bytes())
+    privk = ecc.ECPrivkey(priv)
+    return ecc.ECPubkey(privk.get_public_key_bytes())
 
 
 def ecdsa_sign(msg: str, priv: bytes) -> str:
@@ -89,12 +88,12 @@ def ecdsa_raw_sign(msg: Union[bytes, bytearray],
     if rawmsg and len(msg) != 32:
         raise Exception("Invalid hash input to ECDSA raw sign.")
     compressed, p = read_privkey(priv)
-    newpriv = ECPrivkey(p)
+    newpriv = ecc.ECPrivkey(p)
     if rawmsg:
-        sig = newpriv.ecdsa_sign(msg, sigencode=ecdsa_der_sig_from_r_and_s)
+        sig = newpriv.ecdsa_sign(msg, sigencode=ecc.ecdsa_der_sig_from_r_and_s)
     else:
         msg = sha256d(usermessage_magic(to_bytes(msg)))
-        sig = newpriv.ecdsa_sign(msg, sigencode=ecdsa_der_sig_from_r_and_s)
+        sig = newpriv.ecdsa_sign(msg, sigencode=ecc.ecdsa_der_sig_from_r_and_s)
     return sig
 
 
@@ -114,10 +113,10 @@ def ecdsa_raw_verify(msg: bytes,
     not guaranteed, so return False on any parsing exception.
     '''
     try:
-        sig = ecdsa_sig64_from_der_sig(sig)
+        sig = ecc.ecdsa_sig64_from_der_sig(sig)
         if rawmsg:
             assert len(msg) == 32
-        newpub = ECPubkey(pub)
+        newpub = ecc.ECPubkey(pub)
         if rawmsg:
             retval = newpub.ecdsa_verify(sig, msg)
         else:
@@ -138,22 +137,22 @@ def multiply(s: bytes, pub: bytes, return_serialized: bool = True) -> bytes:
     ('raw' options passed in)
     '''
     try:
-        ECPrivkey(int.to_bytes(s, length=32, byteorder="big"))
+        ecc.ECPrivkey(int.to_bytes(s, length=32, byteorder="big"))
     except ValueError:
         raise ValueError("Invalid tweak for libsecp256k1 "
                          "multiply: {}".format(bintohex(s)))
 
-    pub_obj = ECPubkey(pub)
+    pub_obj = ecc.ECPubkey(pub)
     res = pub_obj * s
     if not return_serialized:
         return res
     return res.get_public_key_bytes()
 
 
-def add_pubkeys(pubkeys: List[bytes]) -> ECPubkey:
+def add_pubkeys(pubkeys: List[bytes]) -> ecc.ECPubkey:
     '''Input a list of binary compressed pubkeys
     and return their sum as a binary compressed pubkey.'''
-    pubkey_list = [ECPubkey(x) for x in pubkeys]
+    pubkey_list = [ecc.ECPubkey(x) for x in pubkeys]
     if pubkey_list:
         r = pubkey_list[0]
         for p in pubkey_list[1:]:

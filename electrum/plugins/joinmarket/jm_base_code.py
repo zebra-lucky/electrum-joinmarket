@@ -8,7 +8,8 @@ from math import ceil, exp
 from numbers import Integral
 from typing import Union, List, Tuple, Optional, Dict, Any
 
-from electrum import ecc
+import electrum_ecc as ecc
+
 from electrum.bip32 import convert_bip32_intpath_to_strpath
 from electrum.bitcoin import (script_to_scripthash, address_to_script,
                               construct_script, opcodes)

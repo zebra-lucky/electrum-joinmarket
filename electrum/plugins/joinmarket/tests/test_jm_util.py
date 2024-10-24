@@ -2,9 +2,9 @@
 
 import os
 
+import electrum_ecc as ecc
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
 
-from electrum import ecc
 from electrum.bitcoin import sha256
 from electrum.transaction import Transaction
 from electrum.util import to_bytes, bfh

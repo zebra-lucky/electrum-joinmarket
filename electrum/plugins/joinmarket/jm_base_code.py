@@ -310,6 +310,8 @@ class JMBaseCodeMixin:
             cert_expiry, current_block_height):
 
         utxo_data = await self.query_utxo_set(utxo, includeconfs=True)
+        if not utxo_data:
+            return None
         if utxo_data[0] is None:
             return None
         if utxo_data[0]["confirms"] <= 0:

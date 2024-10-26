@@ -308,6 +308,7 @@ class JMTestCase(ElectrumTestCase):
         self.network = NetworkMock(self.asyncio_loop, self.config, w)
         self.jmman = jmman = JMManager(self.w)
         self.jmman.on_network_start(self.network)
+        await jmman._enable_jm()
         self.jmw = jmw = jmman.jmw
         for addr in w.get_addresses():
             w.adb.add_address(addr)

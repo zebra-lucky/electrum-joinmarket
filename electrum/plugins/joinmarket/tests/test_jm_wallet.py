@@ -132,7 +132,7 @@ class WalletDBMixinTestCase(JMTestCase):
         jmw.pop_jm_data('taker_utxo_age')
         jmw.pop_jm_data('tx_fees')
         jmw.pop_jm_data('tx_fees_factor')
-        assert self.w.db.get_dict('jm_data') == {}
+        assert self.w.db.get_dict('jm_data') == {'jm_enabled': True}
 
     async def test_get_jm_data(self):
         jmw = self.jmw
@@ -144,12 +144,16 @@ class WalletDBMixinTestCase(JMTestCase):
         jmw = self.jmw
         jmw.set_jm_data('key1', 'value1')
         assert jmw.get_jm_data('key1') == 'value1'
-        assert self.w.db.get_dict('jm_data') == {'key1': 'value1'}
+        assert self.w.db.get_dict('jm_data') == {
+            'jm_enabled': True,
+            'key1': 'value1'}
 
     async def test_pop_jm_data(self):
         jmw = self.jmman.jmw
         jmw.set_jm_data('key1', {'subkey1': 'value1'})
-        assert self.w.db.get_dict('jm_data') == {'key1': {'subkey1': 'value1'}}
+        assert self.w.db.get_dict('jm_data') == {
+            'jm_enabled': True,
+            'key1': {'subkey1': 'value1'}}
         assert jmw.pop_jm_data('key1') == {'subkey1': 'value1'}
 
     async def test_get_jm_commitments(self):
@@ -313,20 +317,16 @@ class JMWalletTestCase(JMTestCase):
 
     async def asyncSetUp(self):
         await super().asyncSetUp()
-        self.addr1 = 'tb1qs33rq0wmrq2awvuxrte0mqkksvzr6x9sdkrfdc'  # unspent
-        self.addr2 = 'tb1q8c2k82wyzcxgk3x2257r2j6ngzedvjppdh4904'  # unspent
         self.addr3 = 'tb1qpjkqrhz3kxsg93c5cw2axhdy39wqy36u9ygzdk'  # spent
         self.addr4 = 'tb1q8qymfhts46zngpnve4rf6mjaqg398ggskvw3ez'  # spent
-        self.unspent_addrs = set([self.addr1, self.addr2])
         self.spent_addrs = set([self.addr3, self.addr4])
+        self.unspent_addrs = set()
         self.txid1 = '55'*32
         self.txid2 = 'aa'*32
         self.w.adb._history_local[self.addr3].add(self.txid1)
         self.w.adb._history_local[self.addr4].add(self.txid2)
 
     async def test_load_and_cleanup(self):
-        self.jmw.load_and_cleanup()
-        await self.jmman._enable_jm()
         self.jmw.load_and_cleanup()
 
     async def test_get_spent_jm_addresses(self):
@@ -363,14 +363,11 @@ class JMWalletTestCase(JMTestCase):
         jmw = self.jmw
         assert jmw.spent_addrs == set()
         assert jmw.unsubscribed_addrs == set()
-        await self.jmman._enable_jm()
-        assert jmw.spent_addrs == self.spent_addrs
-        assert jmw.unsubscribed_addrs == self.spent_addrs
 
         for addr in self.spent_addrs:
             jmw.subscribe_spent_addr(addr)
 
-        assert jmw.spent_addrs == self.spent_addrs
+        assert jmw.spent_addrs == self.unspent_addrs
         assert jmw.unsubscribed_addrs == set()
         for addr in self.spent_addrs:
             assert addr in s.addrs
@@ -381,7 +378,6 @@ class JMWalletTestCase(JMTestCase):
         jmw = self.jmw
         assert jmw.spent_addrs == set()
         assert jmw.unsubscribed_addrs == set()
-        await self.jmman._enable_jm()
         jmw.add_spent_addrs(self.spent_addrs)
         assert jmw.spent_addrs == self.spent_addrs
         assert jmw.unsubscribed_addrs == self.spent_addrs

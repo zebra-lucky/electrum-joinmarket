@@ -7,6 +7,13 @@ from electrum.plugins.joinmarket.tests import JMTestCase
 
 class JMConfTestCase(JMTestCase):
 
+    async def test_init_max_mixdepth(self):
+        jmconf = self.jmconf
+        jmconf.mixdepth = 3
+        jmconf.init_max_mixdepth()
+        assert jmconf.max_mixdepth == 4
+        assert jmconf.mixdepth == 3
+
     async def test_blockchain_network(self):
         jmconf = self.jmconf
         constants.BitcoinMainnet.set_as_network()

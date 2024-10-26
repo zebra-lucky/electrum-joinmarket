@@ -161,12 +161,14 @@ class JMConf:
         self.logger = jmman.logger
         self.wallet = jmman.wallet
         self.jmw = jmman.jmw
-        if self.max_mixdepth != self.mixdepth:
-            self.max_mixdepth = max(self.max_mixdepth, self.mixdepth)
 
         self.BITCOIN_DUST_THRESHOLD = 2730
         self.DUST_THRESHOLD = 10 * self.BITCOIN_DUST_THRESHOLD
         self._mincjamount = self.DEFAULT_MINCJAMOUNT
+
+    def init_max_mixdepth(self):
+        if self.max_mixdepth != self.mixdepth:
+            self.max_mixdepth = max(self.max_mixdepth, self.mixdepth)
 
     @property
     def blockchain_network(self):

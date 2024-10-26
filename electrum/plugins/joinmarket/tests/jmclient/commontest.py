@@ -33,6 +33,7 @@ class DummyJMWallet(JMWallet):
 
     def __init__(self, jmman):
         super().__init__(jmman)
+        self.init_jm_data()
         self.fake_query_results = None
         self.qusfail = False
         self.default_confs = 20

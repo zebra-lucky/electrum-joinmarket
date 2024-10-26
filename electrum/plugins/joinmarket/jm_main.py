@@ -34,6 +34,7 @@ class JMManager(Logger):
         self.tumble_logsdir = logsdir = pathlib.Path(config.path) / "logs"
         self.tumble_log = get_tumble_log(self, logsdir, config)
 
+        self._state = JMStates.Unsupported
         self.jmw = JMWallet(self)
         self.jmconf = JMConf(self)
         self.jmw.jmconf = self.jmconf
@@ -43,7 +44,6 @@ class JMManager(Logger):
 
         self.postponed_notifications = {}
 
-        self._state = JMStates.Unsupported
         self.wallet_types_supported = ['standard']
         self.keystore_types_supported = ['bip32']
         keystore = wallet.db.get('keystore')
@@ -55,7 +55,8 @@ class JMManager(Logger):
         if (self.w_type in self.wallet_types_supported
                 and self.w_ks_type in self.keystore_types_supported):
             if constants.net.TESTNET:
-                if self.jmw.get_jm_data('jm_enabled', False):
+                jm_data = self.wallet.db.get('jm_data')
+                if jm_data and jm_data.get('jm_enabled', False):
                     self._state = JMStates.Ready
                 else:
                     self._state = JMStates.Disabled
@@ -121,8 +122,10 @@ class JMManager(Logger):
         '''Start initialization, find untracked txs'''
         if self.enabled:
             return False
-        self.jmw.set_jm_data('jm_enabled', True)
         self._state = JMStates.Ready
+        self.jmw.init_jm_data()
+        self.jmconf.init_max_mixdepth()
+        self.jmw.set_jm_data('jm_enabled', True)
         await self.loop.run_in_executor(None, self.jmw.load_and_cleanup)
         self.wallet.save_db()
         self.logger.info('JMManager initialized')

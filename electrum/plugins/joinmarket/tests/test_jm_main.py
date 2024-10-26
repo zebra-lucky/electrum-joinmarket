@@ -12,7 +12,7 @@ from tests import ElectrumTestCase
 from electrum.plugins.joinmarket.jm_main import JMManager
 from electrum.plugins.joinmarket.jm_util import JMStates
 from electrum.plugins.joinmarket.tests import (
-    JMTestCase, SynchronizerMock, VerifyierMock, NetworkMock)
+    SynchronizerMock, VerifyierMock, NetworkMock)
 
 
 class JMManagerInitTestCase(ElectrumTestCase):
@@ -69,10 +69,13 @@ class JMManagerInitTestCase(ElectrumTestCase):
         assert not jmman.unsupported
         assert jmman.state == JMStates.Disabled
 
-        jmman.jmw.set_jm_data('jm_enabled', True)
         jmman = JMManager(w)
-        assert jmman.enabled
+        jmman.on_network_start(self.network)
+        assert not jmman.enabled
         assert not jmman.unsupported
+        assert jmman.state == JMStates.Disabled
+        await jmman._enable_jm()
+        assert jmman.enabled
         assert jmman.state == JMStates.Ready
 
     async def test_init_on_mainnet(self):
@@ -83,11 +86,34 @@ class JMManagerInitTestCase(ElectrumTestCase):
         assert jmman.unsupported
         assert 'mainnet' in jmman.unsupported_msg
 
+    async def test_init_jm_data(self):
+        w = self.w
+        db = w.db
+        jmman = JMManager(w)
+        jmman.on_network_start(self.network)
+        jmw = jmman.jmw
 
-class JMManagerTestCase(JMTestCase):
+        assert db.get('jm_data') is None
+        assert db.get('jm_addresses') is None
+        assert db.get('jm_commitments') is None
+        assert db.get('jm_txs') is None
+
+        jmw.init_jm_data()
+        assert db.get('jm_data') is None
+        assert db.get('jm_addresses') is None
+        assert db.get('jm_commitments') is None
+        assert db.get('jm_txs') is None
+
+        await jmman._enable_jm()
+        assert db.get('jm_data') == {'jm_enabled': True}
+        assert db.get('jm_addresses') is not None
+        assert db.get('jm_commitments') is not None
+        assert db.get('jm_txs') is not None
 
     async def test_enable_jm(self):
-        jmman = self.jmman
+        w = self.w
+        jmman = JMManager(w)
+        jmman.on_network_start(self.network)
         assert not jmman.enabled
 
         enabled = await jmman.loop.run_in_executor(None, jmman.enable_jm)

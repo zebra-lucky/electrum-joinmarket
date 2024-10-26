@@ -13,7 +13,6 @@ plugin:
       > 62.08 | I | J/plugins.joinmarket.jm_main.JMManager.[wallet_jm] |
         Lost IRC connection to: irc1.dword.ga . Should reconnect automatically soon.
     - окремий пункт до якого я взагалі ще не дійшов це qml gui
-    - unsupported/disabled JMManager -- do not add `jm_*` in the wallet
     - не може підібрати ордери, таке періодично трапляється при низькому
       значенні maker_timeout_sec -- раніше вистачало 3, зараз замало 5 і процес
       підбору запускається до того як `ordebookwatch.py` додає ордери

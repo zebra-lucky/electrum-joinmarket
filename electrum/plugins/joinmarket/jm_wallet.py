@@ -310,11 +310,11 @@ class JMWallet(KeyPairsMixin, WalletDBMixin, JMBaseCodeMixin, EventListener):
         self.wallet = jmman.wallet
         self.config = jmman.config
         self.debug = False
-        self.db = db = self.wallet.db
-        self.jm_data = db.get_dict('jm_data')
-        self.jm_addresses = db.get_dict('jm_addresses')
-        self.jm_commitments = db.get_dict('jm_commitments')
-        self.jm_txs = db.get_dict('jm_txs')
+        self.db = self.wallet.db
+        self.jm_data = None
+        self.jm_addresses = None
+        self.jm_commitments = None
+        self.jm_txs = None
 
         # sycnhronizer unsubsribed addresses
         self.spent_addrs = set()
@@ -336,6 +336,15 @@ class JMWallet(KeyPairsMixin, WalletDBMixin, JMBaseCodeMixin, EventListener):
         self.processed_txids = set()
 
         self.taskgroup = util.OldTaskGroup()
+
+    def init_jm_data(self):
+        if not self.jmman.enabled:
+            return
+        db = self.db
+        self.jm_data = db.get_dict('jm_data')
+        self.jm_addresses = db.get_dict('jm_addresses')
+        self.jm_commitments = db.get_dict('jm_commitments')
+        self.jm_txs = db.get_dict('jm_txs')
 
     @property
     def jmconf(self):
@@ -481,6 +490,8 @@ class JMWallet(KeyPairsMixin, WalletDBMixin, JMBaseCodeMixin, EventListener):
         return gen_cnt
 
     def synchronize(self):
+        if not self.jmman.enabled:
+            return
         count = 0
         with self.wallet.lock:
             for d in range(self.jmconf.max_mixdepth + 1):

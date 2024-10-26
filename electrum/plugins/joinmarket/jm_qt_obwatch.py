@@ -89,6 +89,7 @@ class OBWatchTab(QWidget, QtEventListener):
         headers = self.orders_headers()
         self.otw = t = MyTreeWidget(self.orders_tab, self.create_orders_menu,
                                     headers)
+        t.setSortingEnabled(True)
         t.on_update = self.update_orders
         for i in range(len(headers)):
             t.header().setSectionResizeMode(
@@ -148,6 +149,7 @@ class OBWatchTab(QWidget, QtEventListener):
         headers = self.fbonds_headers()
         self.btw = t = MyTreeWidget(self.orders_tab, self.create_fbonds_menu,
                                     headers)
+        t.setSortingEnabled(True)
         t.on_update = self.update_fbonds
         for i in range(len(headers)):
             t.header().setSectionResizeMode(

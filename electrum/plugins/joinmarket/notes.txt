@@ -1,12 +1,10 @@
 -------------------------------------------------------------------------------
 plugin:
     - check onion/IRC single/multiple password/no passdword join
-    - make_keypairs_cache logger.info not shown in Qt log
-    - jm_qt_obwatch: sorting by columns, filter by text
 
-    - remove addrask from scheule?
     - save last shedule tx as done to wallet schedule when confirmed
 
+    - jm_qt_obwatch: advanced sorting by columns, filter by text
     - потрібно якось документувати
 
     - irc reconnect interval 5 sec -> change to progressive interval

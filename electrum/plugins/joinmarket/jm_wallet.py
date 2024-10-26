@@ -495,7 +495,6 @@ class JMWallet(KeyPairsMixin, WalletDBMixin, JMBaseCodeMixin, EventListener):
 
     @ignore_exceptions  # don't kill outer taskgroup
     async def main_loop(self):
-        self.logger.info("starting taskgroup.")
         try:
             async with self.taskgroup as group:
                 await group.spawn(self.do_synchronize_loop())

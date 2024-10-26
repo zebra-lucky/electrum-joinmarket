@@ -21,4 +21,4 @@ available_for = ['qt']
 download_url = 'https://dword.ga/joinmarket.zip'
 author = 'JoinMarket'
 licence = 'MIT'
-version = '0.0.1a'
+version = '0.0.2a'

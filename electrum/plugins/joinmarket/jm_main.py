@@ -25,18 +25,18 @@ class JMManager(Logger):
         self.wallet = wallet
         self.network = None
         self.loop = None
-        Logger.__init__(self)
         self.config = config = wallet.config
-        self.jmw = JMWallet(self)
-        self.jmconf = JMConf(self)
-        self.jmw.jmconf = self.jmconf
-
+        Logger.__init__(self)
         self.log_handler = JMGUILogHandler(self)
         self.logger = logging.LoggerAdapter(self.logger,
                                             {'jmman_id': id(self)})
         # tumble log will not always be used, but is made available anyway:
         self.tumble_logsdir = logsdir = pathlib.Path(config.path) / "logs"
         self.tumble_log = get_tumble_log(self, logsdir, config)
+
+        self.jmw = JMWallet(self)
+        self.jmconf = JMConf(self)
+        self.jmw.jmconf = self.jmconf
 
         self.states = JMStates
         self.state_lock = threading.Lock()

@@ -58,6 +58,8 @@ class JMManager(Logger):
                 jm_data = self.wallet.db.get('jm_data')
                 if jm_data and jm_data.get('jm_enabled', False):
                     self._state = JMStates.Ready
+                    self.jmw.init_jm_data()
+                    self.jmconf.init_max_mixdepth()
                 else:
                     self._state = JMStates.Disabled
         if self.unsupported:

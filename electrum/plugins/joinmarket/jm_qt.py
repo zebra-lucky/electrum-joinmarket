@@ -526,10 +526,7 @@ class JMWalletTab(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.label1 = QLabel(
-            'No wallet loaded. Use "Wallet > Load" to load existing wallet ' +
-            'or "Wallet > Generate" to create a new wallet.',
-            self)
+        self.label1 = QLabel('', self)
         self.label1.setAlignment(
                 Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
         v = MyTreeWidget(self, self.create_menu, self.getHeaders())
@@ -612,6 +609,8 @@ class JMWalletTab(QWidget):
         self.openQRCodePopup(address, address)
 
     def updateWalletInfo(self):
+        if not self.jmman.enabled:
+            return
         max_mixdepth_count = GUIconf.max_mix_depth
 
         previous_expand_states = []
@@ -1724,6 +1723,8 @@ class CoinsTab(QWidget):
         utxo database (no sync e.g.) so can be immediate.
         """
         jmman = self.jmman
+        if not jmman.enabled:
+            return
         self.cTW.clear()
 
         def show_blank():
@@ -1855,6 +1856,8 @@ class TxHistoryTab(QWidget):
 
     def updateTxInfo(self, txinfo=None):
         self.tHTW.clear()
+        if not self.jmman.enabled:
+            return
         if not txinfo:
             txinfo = self.getTxInfoFromHistory()
         for t in txinfo:
@@ -1902,7 +1905,6 @@ class SettingsTab(QWidget):
         self.jm_dlg = jm_dlg
         self.jmman = jm_dlg.jmman
         self.logger = self.jmman.logger
-        self.msg_channels = self.jmman.jmconf.get_msg_channels()
         self.settings_grid = None
         self.constructUI()
 
@@ -1937,6 +1939,18 @@ class SettingsTab(QWidget):
         frame = QFrame()
         self.settings_grid = grid = QGridLayout()
 
+        if not jmman.enabled:
+            self.outerGrid.addWidget(sA, 3, 0)
+
+            sA.setWidget(frame)
+            frame.setLayout(grid)
+            frame.adjustSize()
+            if not update:
+                self.setLayout(self.outerGrid)
+            self.show()
+            return
+
+        self.msg_channels = self.jmman.jmconf.get_msg_channels()
         self.settingsFields = []
         j = 0
         for i, section in enumerate(conf_sections):

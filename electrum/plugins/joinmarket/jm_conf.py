@@ -158,6 +158,7 @@ class JMConf:
     DEFAULT_MSG_CHANNELS_REGTEST['irc2']['enabled'] = False
 
     def __init__(self, jmman):
+        self.jmman = jmman
         self.logger = jmman.logger
         self.wallet = jmman.wallet
         self.jmw = jmman.jmw
@@ -183,6 +184,8 @@ class JMConf:
     @property
     def mixdepth(self):
         '''effective maximum mixdepth to be used by joinmarket'''
+        if not self.jmman.enabled:
+            return self.DEFAULT_MIXDEPTH
         return self.jmw.get_jm_data('mixdepth', self.DEFAULT_MIXDEPTH)
 
     @mixdepth.setter
@@ -485,6 +488,8 @@ class JMConf:
     @property
     def show_warn_electrumx(self):
         '''Check if warning about JM specific on electrum should be shown'''
+        if not self.jmman.enabled:
+            return True
         return self.jmw.get_jm_data('show_warn_electrumx', True)
 
     @show_warn_electrumx.setter
@@ -509,6 +514,8 @@ class JMConf:
     @property
     def subscribe_spent(self):
         '''Check if on server subscriptions for spent JM addresses done'''
+        if not self.jmman.enabled:
+            return self.DEFAULT_SUBSCRIBE_SPENT
         return self.jmw.get_jm_data('subscribe_spent',
                                     self.DEFAULT_SUBSCRIBE_SPENT)
 

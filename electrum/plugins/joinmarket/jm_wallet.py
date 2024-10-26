@@ -261,6 +261,10 @@ class WalletDBMixin:
             return JMAddress(*jm_address_tuple)
 
     @wallet_db_locked
+    def is_jm_address(self, address):
+        return address in self.jm_addresses
+
+    @wallet_db_locked
     def get_jm_addresses(self, *, mixdepth=None, internal=None):
         addresses = {k: JMAddress(*v) for k, v in self.jm_addresses.items()}
         if mixdepth is not None:

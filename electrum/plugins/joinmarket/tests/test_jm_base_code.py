@@ -479,8 +479,9 @@ class JMBaseCodeMixinTestCase(JMTestCase):
         first_coin = None
         reuse_coin = None
         self.cb_called = False
+        addr = 'tb1qpjkqrhz3kxsg93c5cw2axhdy39wqy36u9ygzdk'
 
-        coins = w.adb.get_utxos(['tb1qpjkqrhz3kxsg93c5cw2axhdy39wqy36u9ygzdk'])
+        coins = w.adb.get_utxos([addr])
         for c in coins:
             if c.value_sats() == 2500000:  # First transaction
                 first_coin = c
@@ -502,6 +503,23 @@ class JMBaseCodeMixinTestCase(JMTestCase):
         assert not w.is_frozen_coin(first_coin)
         assert w.is_frozen_coin(reuse_coin)
         assert self.cb_called
+
+        # check no freeze for coins on address not in jm_addresses
+        self.cb_called = False
+        w.adb.remove_transaction(reuse_txid)
+        jmw.jm_addresses.pop(addr)
+        w.set_frozen_state_of_coins([reuse_coin.prevout.to_str()], False)
+
+        w.adb.add_transaction(reuse_tx)
+        w.adb.add_verified_tx(reuse_txid,
+                              TxMinedInfo(int(1e6), 10, 10, 10, 10))
+
+        jmw.set_autofreeze_warning_cb(autofreeze_warning_cb)
+        await jmw.transaction_monitor(reuse_tx, reuse_txid)
+
+        assert not w.is_frozen_coin(first_coin)
+        assert not w.is_frozen_coin(reuse_coin)
+        assert not self.cb_called
 
     async def test_transaction_monitor(self):
         jmw = self.jmw

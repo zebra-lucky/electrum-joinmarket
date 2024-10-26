@@ -191,6 +191,14 @@ class WalletDBMixinTestCase(JMTestCase):
         jm_addr = jmw.get_jm_address(addr1)
         assert jm_addr == JMAddress(mixdepth=0, branch=1, index=2)
 
+    async def test_is_jm_address(self):
+        jmw = self.jmman.jmw
+        addr1 = 'addr1'
+        addr2 = 'addr2'
+        jmw.jm_addresses[addr1] = (0, 1, 2)
+        assert jmw.is_jm_address(addr1)
+        assert not jmw.is_jm_address(addr2)
+
     async def test_get_jm_addresses(self):
         jmw = self.jmman.jmw
         jmw.jm_addresses.clear()

@@ -864,6 +864,8 @@ class JMBaseCodeMixin:
         to_be_frozen = set()
         w = self.wallet
         for outpoint, au in added_utxos.items():
+            if not self.is_jm_address(au.address):
+                continue
             received = w.adb.get_addr_io(au.address)[0]
             if len(received) > 1:
                 to_be_frozen.add(outpoint)

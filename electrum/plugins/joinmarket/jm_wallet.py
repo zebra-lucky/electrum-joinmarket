@@ -559,6 +559,8 @@ class JMWallet(KeyPairsMixin, WalletDBMixin, JMBaseCodeMixin, EventListener):
 
     @event_listener
     async def on_event_adb_added_tx(self, adb, txid: str, tx: Transaction):
+        if not self.jmman.enabled:
+            return
         if self.wallet.adb != adb:
             return
         try:
@@ -568,6 +570,8 @@ class JMWallet(KeyPairsMixin, WalletDBMixin, JMBaseCodeMixin, EventListener):
 
     @event_listener
     async def on_event_adb_added_verified_tx(self, adb, txid):
+        if not self.jmman.enabled:
+            return
         if self.wallet.adb != adb:
             return
         try:
@@ -583,6 +587,8 @@ class JMWallet(KeyPairsMixin, WalletDBMixin, JMBaseCodeMixin, EventListener):
     @event_listener
     async def on_event_adb_tx_height_changed(self, adb, txid,
                                              old_height, tx_height):
+        if not self.jmman.enabled:
+            return
         if self.wallet.adb != adb:
             return
         try:

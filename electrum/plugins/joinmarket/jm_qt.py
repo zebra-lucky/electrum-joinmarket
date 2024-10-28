@@ -1112,7 +1112,8 @@ class SpendTab(QWidget):
                                       in self.spendstate.loaded_schedule
                                       if x not in ["INTERNAL", "addrask"]]
             # 2 Check for unconfirmed
-            if (isinstance(self.spendstate.loaded_schedule[0][-1], str)
+            if (self.spendstate.loaded_schedule
+                    and isinstance(self.spendstate.loaded_schedule[0][-1], str)
                     and len(self.spendstate.loaded_schedule[0][-1]) == 64):
                 # ensure last transaction is confirmed before restart
                 jmman.tumble_log.info("WAITING TO RESTART...")
@@ -1576,7 +1577,8 @@ class SpendTab(QWidget):
         jmman = self.jmman
         coro = jmman.jmw.cleanup_keypairs()
         asyncio.run_coroutine_threadsafe(coro, jmman.loop)
-        self.taker.aborted = True
+        if self.taker:
+            self.taker.aborted = True
         self.giveUp()
 
     def giveUp(self):

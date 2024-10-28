@@ -1,12 +1,8 @@
 -------------------------------------------------------------------------------
 plugin:
     - check onion/IRC single/multiple password/no passdword join
-
-    - save last shedule tx as done to wallet schedule when confirmed
-
     - jm_qt_obwatch: advanced sorting by columns, filter by text
     - потрібно якось документувати
-
     - irc reconnect interval 5 sec -> change to progressive interval
     - jm_wallet.py: look where to add save_db
     - change message on JMDLG.shutdown:

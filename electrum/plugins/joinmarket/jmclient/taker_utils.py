@@ -461,7 +461,7 @@ def tumbler_taker_finished_update(taker, tumble_log, options,
             tumble_log.info(human_readable_schedule_entry(
                 taker.schedule[taker.schedule_index], hramt))
             # copy of above, TODO refactor out
-            taker.schedule[taker.schedule_index][5] = 1
+            taker.schedule[taker.schedule_index][-1] = 1
             jmman.jmconf.set_schedule(schedule_to_text(taker.schedule))
             jmman.wallet.save_db()
 

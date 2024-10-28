@@ -55,7 +55,7 @@ from electrum.plugins.joinmarket import jmbitcoin as btc
 # 7ec1cdc658945013e04ff3d6946f15ccc9df52c323f0ac012e7f61
 #
 # Virtual sizes can be calculated from electrum.transaction.Transaction.
-# deserialize(unhexlify(txhex)).get_virtual_size()  FIXME
+# deserialize(unhexlify(txhex)).get_virtual_size()
 #
 # More cases copied from:
 # https://github.com/kristapsk/bitcoin-scripts/

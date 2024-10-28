@@ -136,9 +136,7 @@ class JMBaseCodeMixin:
         tx_fees_factor = abs(self.jmconf.tx_fees_factor)
 
         # NOTE: can not get data from estimatesmartfee with electrum protocol,
-        # but value with default config seems 1000 sat/kb
-        mempoolminfee_in_sat = 1000
-        # mempoolminfee_in_sat = self._get_mempool_min_fee()
+        mempoolminfee_in_sat = None
         # in case of error
         if mempoolminfee_in_sat is None:
             mempoolminfee_in_sat = fallback_fee

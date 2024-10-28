@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import asyncio
 import copy
 from unittest import mock
 
-from electrum import constants, util, wallet, SimpleConfig
+from electrum import constants, util, storage, SimpleConfig
 from electrum.wallet import restore_wallet_from_text
 
 from tests import ElectrumTestCase
@@ -20,14 +19,12 @@ class JMManagerInitTestCase(ElectrumTestCase):
 
     TESTNET = True
 
-    def setUp(self):
-        super().setUp()
-        patcher = mock.patch.object(wallet.Abstract_Wallet, 'save_db')
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        patcher = mock.patch.object(storage.WalletStorage, 'write')
         self.mock_save_db = patcher.start()
         self.addCleanup(patcher.stop)
 
-    async def asyncSetUp(self):
-        await super().asyncSetUp()
         self.asyncio_loop = util.get_asyncio_loop()
         self.config = SimpleConfig({'electrum_path': self.electrum_path})
         self.config.FEE_EST_DYNAMIC = False
@@ -44,7 +41,6 @@ class JMManagerInitTestCase(ElectrumTestCase):
         self.w._up_to_date = True
         self.w.db.put('stored_height', int(1e7))
         self.network = NetworkMock(self.asyncio_loop, self.config, w)
-        await asyncio.sleep(0.2)  # FIXME dirty fix to fix patching of save_db
 
     async def test_init(self):
         w = self.w

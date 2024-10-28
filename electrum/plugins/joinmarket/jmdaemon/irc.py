@@ -220,9 +220,10 @@ class txIRC_Client(IRCClient):
         IRCClient.connection_made(self, transport)
 
     def connection_lost(self, reason):
-        wlog(self.logger, "INFO",
-             "Lost IRC connection to: " + str(self.hostname) +
-             " . Should reconnect automatically soon.")
+        msg = f'Lost IRC connection to: {self.hostname}.'
+        if not self.wrapper.give_up:
+            msg += ' Should reconnect automatically soon.'
+        wlog(self.logger, "INFO", msg)
         if not self.wrapper.give_up and self.wrapper.on_disconnect:
             commands.callLater(0.0, self.wrapper.on_disconnect, self.wrapper)
         IRCClient.connection_lost(self, reason)

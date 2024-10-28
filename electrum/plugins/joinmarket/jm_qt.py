@@ -1500,7 +1500,7 @@ class SpendTab(QWidget):
             # complexity/duplication
             if (self.spendstate.typestate == 'multiple'
                     and not self.tumbler_options):
-                self.taker.jmman.wallet.save_db()  # FIXME?
+                self.taker.jmman.wallet.save_db()
             return
         if fromtx:
             if res:

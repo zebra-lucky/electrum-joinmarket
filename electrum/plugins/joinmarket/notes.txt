@@ -1,9 +1,5 @@
 -------------------------------------------------------------------------------
 plugin:
-    - change message on JMDLG.shutdown:
-      > 62.08 | I | J/plugins.joinmarket.jm_main.JMManager.[wallet_jm] |
-        Lost IRC connection to: irc1.dword.ga . Should reconnect automatically soon.
-    - jm_wallet.py: look where to add save_db
     - потрібно якось документувати
     - окремий пункт до якого я взагалі ще не дійшов це qml gui
     - jm_qt_obwatch: advanced sorting by columns, filter by text

@@ -1,7 +1,8 @@
 -------------------------------------------------------------------------------
 plugin:
+    - покращення покриття тестами
     - потрібно якось документувати
-    - окремий пункт до якого я взагалі ще не дійшов це qml gui
+    - qml gui
     - jm_qt_obwatch: advanced sorting by columns, filter by text
     - irc reconnect interval 5 sec -> change to progressive interval
     - коли yieldgenerator запускається після ob-watcher.py дані по fidelity
@@ -9,17 +10,6 @@ plugin:
     - коли IRC сервер запускається після зупинки треба через деякий час
       відсилати повторний запит по OBWatch -- makers не шлють offers
       після reconnect
-tests:
-    - jm_utils: add_txin_sig: add testing for p2sh-p2wpkh
-    - tests: place back test_walletservice.py, test_wallet.py?,
-      test_tx_creation
-    - tests: look to base code test/jmclient/test_coinjoin.py
-        test/unified/test_e2e_coinjoin.py
-    - ну і так... покриття тестами як завжди неповне...
 -------------------------------------------------------------------------------
-блін, транзакції з низьким fee позалипали без блоків, тепер у makers немає
-liquidity
-
-це до речі можлива DOS атака на makers
-на makers треба перевіряти tx fee по поточним feerate
+транзакції з низьким fee позалипали без блоків, тепер у makers немає liquidity
 -------------------------------------------------------------------------------

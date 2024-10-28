@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import asyncio
 from types import SimpleNamespace
 from typing import List
 from unittest import mock
 
-from electrum import util, wallet, SimpleConfig
+from electrum import util, storage, SimpleConfig
 from electrum.bitcoin import address_to_scripthash
 from electrum.transaction import Transaction
 from electrum.wallet import restore_wallet_from_text
@@ -282,14 +281,12 @@ class JMTestCase(ElectrumTestCase):
 
     TESTNET = True
 
-    def setUp(self):
-        super().setUp()
-        patcher = mock.patch.object(wallet.Abstract_Wallet, 'save_db')
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        patcher = mock.patch.object(storage.WalletStorage, 'write')
         self.mock_save_db = patcher.start()
         self.addCleanup(patcher.stop)
 
-    async def asyncSetUp(self):
-        await super().asyncSetUp()
         self.asyncio_loop = util.get_asyncio_loop()
         self.config = SimpleConfig({'electrum_path': self.electrum_path})
         self.config.FEE_EST_DYNAMIC = False
@@ -321,4 +318,3 @@ class JMTestCase(ElectrumTestCase):
         w.adb.add_transaction(Transaction(tx1_str))
         w.adb.add_verified_tx(tx1_txid, util.TxMinedInfo(
             int(1e6), '', '', '', ''))
-        await asyncio.sleep(0.2)  # FIXME dirty fix to fix patching of save_db

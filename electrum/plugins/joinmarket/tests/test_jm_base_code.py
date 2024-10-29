@@ -122,6 +122,14 @@ class JMBaseCodeMixinTestCase(JMTestCase):
             v += jmw.estimate_fee_per_kb(1)
         assert 20000 < v/10 < 20000 * 1.2
 
+        jmw.config.fee_estimates = {25: 23, 10: 28, 5: 119, 2: 181}
+        jmw.estimate_fee_per_kb(1001)
+        jmw.estimate_fee_per_kb(-1)
+        jmw.estimate_fee_per_kb(0)
+        jmw.estimate_fee_per_kb(1)
+        jmw.estimate_fee_per_kb(2)
+        jmw.estimate_fee_per_kb(3)
+
     async def test_query_utxo_set(self):
         jmw = self.jmw
         jm_utxos = [utxostr_to_utxo(u)[1] for u in jmw.get_jm_utxos()]
@@ -274,6 +282,11 @@ class JMBaseCodeMixinTestCase(JMTestCase):
         idx = w.get_address_index(addr)
         assert jmw.get_address_from_path(idx) == addr
 
+        # change address
+        addr = 'tb1qnaa3sy52lfljerrv824al34dp2k79d7wyu3mgf'
+        idx = w.get_address_index(addr)
+        assert jmw.get_address_from_path(idx) == addr
+
     async def test_get_balance_by_mixdepth(self):
         jmw = self.jmw
         w = jmw.wallet
@@ -417,6 +430,14 @@ class JMBaseCodeMixinTestCase(JMTestCase):
         with self.assertRaises(WalletMixdepthOutOfRange):
             jmw.get_internal_addr(1e9)
 
+        adb = self.w.adb
+        used = set()
+        for addr in jmw.get_jm_addresses(mixdepth=0, internal=True):
+            used.add(addr)
+            adb._history_local[addr] = ['test']
+        addr = jmw.get_internal_addr(0)
+        assert addr and addr not in used
+
     async def test_estimate_tx_fee(self):
         jmw = self.jmw
         assert jmw.estimate_tx_fee(6, 8) == 66700
@@ -467,6 +488,23 @@ class JMBaseCodeMixinTestCase(JMTestCase):
         jmw.wallet_service_register_callbacks([cb3], tx1_txid, 'confirmed')
         txd = await jmw.get_tx(tx1_txid)
         return cb1, cb2, cb3, txd, tx1_txid
+
+    async def test_default_autofreeze_warning_cb(self):
+        jmw = self.jmw
+        reuse_tx = Transaction(raw_reuse_tx)
+        o = reuse_tx.outputs()[0]
+        jmw.default_autofreeze_warning_cb('outpoint', o)
+
+    async def test_set_autofreeze_warning_cb(self):
+
+        def cb():
+            pass
+
+        jmw = self.jmw
+        jmw.set_autofreeze_warning_cb(cb)
+        assert jmw.autofreeze_warning_cb == cb
+        jmw.set_autofreeze_warning_cb()
+        assert jmw.autofreeze_warning_cb == jmw.default_autofreeze_warning_cb
 
     async def test_check_for_reuse(self):
         jmw = self.jmw

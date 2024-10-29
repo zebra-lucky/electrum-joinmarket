@@ -283,9 +283,8 @@ class JMTestCase(ElectrumTestCase):
 
     async def asyncSetUp(self):
         await super().asyncSetUp()
-        patcher = mock.patch.object(storage.WalletStorage, 'write')
-        self.mock_save_db = patcher.start()
-        self.addCleanup(patcher.stop)
+        self.patcher = mock.patch.object(storage.WalletStorage, 'write')
+        self.patcher.start()
 
         self.asyncio_loop = util.get_asyncio_loop()
         self.config = SimpleConfig({'electrum_path': self.electrum_path})
@@ -318,3 +317,8 @@ class JMTestCase(ElectrumTestCase):
         w.adb.add_transaction(Transaction(tx1_str))
         w.adb.add_verified_tx(tx1_txid, util.TxMinedInfo(
             int(1e6), '', '', '', ''))
+
+    async def asyncTearDown(self):
+        self.jmman.stop()
+        await self.w.stop()
+        self.patcher.stop()

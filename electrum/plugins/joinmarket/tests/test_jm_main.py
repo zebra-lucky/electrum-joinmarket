@@ -21,9 +21,8 @@ class JMManagerInitTestCase(ElectrumTestCase):
 
     async def asyncSetUp(self):
         await super().asyncSetUp()
-        patcher = mock.patch.object(storage.WalletStorage, 'write')
-        self.mock_save_db = patcher.start()
-        self.addCleanup(patcher.stop)
+        self.patcher = mock.patch.object(storage.WalletStorage, 'write')
+        self.patcher.start()
 
         self.asyncio_loop = util.get_asyncio_loop()
         self.config = SimpleConfig({'electrum_path': self.electrum_path})
@@ -41,6 +40,10 @@ class JMManagerInitTestCase(ElectrumTestCase):
         self.w._up_to_date = True
         self.w.db.put('stored_height', int(1e7))
         self.network = NetworkMock(self.asyncio_loop, self.config, w)
+
+    async def asyncTearDown(self):
+        await self.w.stop()
+        self.patcher.stop()
 
     async def test_init(self):
         w = self.w
@@ -73,6 +76,7 @@ class JMManagerInitTestCase(ElectrumTestCase):
         await jmman._enable_jm()
         assert jmman.enabled
         assert jmman.state == JMStates.Ready
+        jmman.stop()
 
     async def test_init_on_mainnet(self):
         w = self.w
@@ -105,6 +109,7 @@ class JMManagerInitTestCase(ElectrumTestCase):
         assert db.get('jm_addresses') is not None
         assert db.get('jm_commitments') is not None
         assert db.get('jm_txs') is not None
+        jmman.stop()
 
     async def test_enable_jm(self):
         w = self.w
@@ -123,3 +128,4 @@ class JMManagerInitTestCase(ElectrumTestCase):
         enabled = await jmman._enable_jm()
         assert jmman.enabled
         assert not enabled
+        jmman.stop()

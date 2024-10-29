@@ -430,7 +430,7 @@ class JMWallet(KeyPairsMixin, WalletDBMixin, JMBaseCodeMixin, EventListener):
         result = []
         w = self.wallet
         with w.lock:
-            while len(result) < addrs_count:
+            while len(result) < addrs_count and not self.jmman.stopped:
                 if internal:
                     unused = w.calc_unused_change_addresses()
                 else:
@@ -467,7 +467,7 @@ class JMWallet(KeyPairsMixin, WalletDBMixin, JMBaseCodeMixin, EventListener):
         gen_cnt = 0  # num new addresses we generated
         limit = self.jmconf.gaplimit
 
-        while True:
+        while True and not self.jmman.stopped:
             jm_addrs = self.get_jm_addresses(mixdepth=mixdepth,
                                              internal=internal)
             addr_cnt = len(jm_addrs)
@@ -515,7 +515,7 @@ class JMWallet(KeyPairsMixin, WalletDBMixin, JMBaseCodeMixin, EventListener):
             self.logger.info("taskgroup stopped.")
 
     async def do_synchronize_loop(self):
-        while True:
+        while True and not self.jmman.stopped:
             if self.jmman.enabled:
                 # note: we only generate new HD addresses if the existing ones
                 #       have history that are mined and SPV-verified.

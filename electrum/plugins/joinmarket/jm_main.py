@@ -35,6 +35,7 @@ class JMManager(Logger):
         self.tumble_log = get_tumble_log(self, logsdir, config)
 
         self._state = JMStates.Unsupported
+        self._stopped = False
         self.jmw = JMWallet(self)
         self.jmconf = JMConf(self)
         self.jmw.jmconf = self.jmconf
@@ -111,6 +112,10 @@ class JMManager(Logger):
         '''JM was enabled on this wallet'''
         return self.state not in [JMStates.Unsupported, JMStates.Disabled]
 
+    @property
+    def stopped(self):
+        return self._stopped
+
     def enable_jm(self):
         '''Enables JM on this wallet, store changes in db.'''
         if not self.enabled:
@@ -151,8 +156,9 @@ class JMManager(Logger):
         self.jmw.on_network_start(network)
         asyncio.ensure_future(self.trigger_postponed_notifications())
 
-    def on_stop_threads(self):
+    def stop(self):
         '''Run when the wallet is unloaded/stopped'''
+        self._stopped = True
         self.jmw.unregister_callbacks()
 
     def postpone_notification(self, event, *args):

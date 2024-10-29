@@ -36,6 +36,6 @@ class JoinMarketPlugin(BasePlugin):
     def close_wallet(self, wallet):
         if wallet not in self._wallets:
             return
-        wallet.jmman.on_stop_threads()
+        wallet.jmman.stop()
         del wallet.jmman
         self._wallets.remove(wallet)

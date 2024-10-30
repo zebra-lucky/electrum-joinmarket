@@ -11,8 +11,10 @@ from electrum.plugins.joinmarket.jmbase import commands
 from electrum.plugins.joinmarket.jmbase import bintohex
 from electrum.plugins.joinmarket import jmbitcoin as bitcoin
 from electrum.plugins.joinmarket.jmclient import (
-    Taker, JMClientProtocolFactory, JMTakerClientProtocol, NO_ROUNDING,
+    Taker, JMClientProtocolFactory, NO_ROUNDING,
     get_max_cj_fee_values, fidelity_bond_weighted_order_choose)
+from electrum.plugins.joinmarket.jmdaemon.protocol import (
+    NICK_HASH_LENGTH, NICK_MAX_ENCODED, JM_VERSION, JOINMARKET_NICK_HEADER)
 
 from electrum.plugins.joinmarket.tests import JMTestCase
 
@@ -117,7 +119,7 @@ class JMTestServerProtocol(JMBaseProtocol):
     @commands.JMStartMC.responder
     async def on_JM_START_MC(self, nick):
         show_receipt("STARTMC", nick)
-        d = self.callRemote(commands.JMUp)
+        d = await self.callRemote(commands.JMUp, self.factory.proto_client)
         self.defaultCallbacks(d)
         return {'accepted': True}
 
@@ -247,11 +249,61 @@ class BaseClientProtocolTestCase(JMTestCase):
 
 class ClientProtocolTestCase(BaseClientProtocolTestCase):
 
+    async def test_on_JM_INIT_PROTO(self):
+        await self.client_proto.on_JM_INIT_PROTO(
+            nick_hash_length=NICK_HASH_LENGTH,
+            nick_max_encoded=NICK_MAX_ENCODED,
+            joinmarket_nick_header=JOINMARKET_NICK_HEADER,
+            joinmarket_version=JM_VERSION)
+
     async def test_on_JM_REQUEST_MSGSIG(self):
+        self.client_proto.nick_hashlen = NICK_HASH_LENGTH
+        self.client_proto.nick_maxencoded = NICK_MAX_ENCODED
+        self.client_proto.nick_header = JOINMARKET_NICK_HEADER
+        self.client_proto.jm_version = JM_VERSION
+        self.client_proto.connectionMade()
+        self.client_proto.set_nick()
         await self.client_proto.on_JM_REQUEST_MSGSIG(
            nick="dummynickforsign", cmd="command1", msg="msgforsign",
            msg_to_be_signed="fullmsgforsign", hostid="hostid1")
-        assert 0
+
+    async def test_on_JM_REQUEST_MSGSIG_VERIFY(self):
+        await self.client_proto.on_JM_INIT_PROTO(
+            nick_hash_length=NICK_HASH_LENGTH,
+            nick_max_encoded=NICK_MAX_ENCODED,
+            joinmarket_nick_header=JOINMARKET_NICK_HEADER,
+            joinmarket_version=JM_VERSION)
+        fullmsg = "fullmsgforverify"
+        priv = b"\xaa"*32 + b"\x01"
+        pub = bintohex(bitcoin.privkey_to_pubkey(priv).get_public_key_bytes())
+        sig = bitcoin.ecdsa_sign(fullmsg, priv)
+        await self.client_proto.on_JM_REQUEST_MSGSIG_VERIFY(
+            msg="msgforverify",
+            fullmsg=fullmsg,
+            sig=sig,
+            pubkey=pub,
+            nick="dummynickforverify",
+            hashlen=4,
+            max_encoded=5,
+            hostid="hostid2")
+
+    async def test_make_tx(self):
+        await self.client_proto.on_JM_INIT_PROTO(
+            nick_hash_length=NICK_HASH_LENGTH,
+            nick_max_encoded=NICK_MAX_ENCODED,
+            joinmarket_nick_header=JOINMARKET_NICK_HEADER,
+            joinmarket_version=JM_VERSION)
+        nick_list = ['nick1', 'nick2']
+        tx = b'deadbeaf'
+        await self.client_proto.make_tx(nick_list=nick_list, tx=tx)
+
+    async def test_request_mc_shutdown(self):
+        await self.client_proto.on_JM_INIT_PROTO(
+            nick_hash_length=NICK_HASH_LENGTH,
+            nick_max_encoded=NICK_MAX_ENCODED,
+            joinmarket_nick_header=JOINMARKET_NICK_HEADER,
+            joinmarket_version=JM_VERSION)
+        await self.client_proto.request_mc_shutdown()
 
 
 class TakerClientProtocolTestCase(BaseClientProtocolTestCase):

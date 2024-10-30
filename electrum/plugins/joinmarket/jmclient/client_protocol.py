@@ -123,7 +123,7 @@ class JMClientProtocol(BaseClientProtocol):
         if not nick_unpadded == base_encode(nick_pkh_raw, base=58):
             self.logger.debug("Nick hash check failed, expected: " +
                               str(nick_unpadded) + ", got: " +
-                              str(btc.base58.encode(nick_pkh_raw)))
+                              str(base_encode(nick_pkh_raw, base=58)))
             verif_result = False
         d = await self.callRemote(commands.JMMsgSignatureVerify,
                                   self.proto_daemon,

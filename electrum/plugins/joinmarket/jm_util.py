@@ -17,13 +17,6 @@ from electrum.transaction import (PartialTransaction, Transaction,
 from electrum.util import to_bytes
 
 
-TXID_PATTERN = re.compile('([0123456789ABCDEFabcdef]{64})')
-ADDR_PATTERN = re.compile(
-    '([123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
-    'abcdefghijkmnopqrstuvwxyz]{20,80})')
-FILTERED_TXID = '<filtered txid>'
-FILTERED_ADDR = '<filtered address>'
-
 # secp256k1 prime
 prime = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
 
@@ -46,32 +39,6 @@ class UnknownAddressForLabel(Exception):
 
 def verify_signature(pubkey: bytes, sig: bytes, h: bytes) -> bool:
     return ecc.ECPubkey(pubkey).ecdsa_verify(sig, h)
-
-
-def filter_log_line(line):
-    '''Filter out txids/addresses from log lines'''
-    pos = 0
-    output_line = ''
-    while pos < len(line):
-        m = TXID_PATTERN.search(line, pos)
-        if m:
-            output_line += line[pos:m.start()]
-            output_line += FILTERED_TXID
-            pos = m.end()
-            continue
-
-        m = ADDR_PATTERN.search(line, pos)
-        if m:
-            addr = m.group()
-            if is_address(addr, net=constants.net):
-                output_line += line[pos:m.start()]
-                output_line += FILTERED_ADDR
-                pos = m.end()
-                continue
-
-        output_line += line[pos:]
-        break
-    return output_line
 
 
 def guess_address_script_type(addr):

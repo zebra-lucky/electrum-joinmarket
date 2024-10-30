@@ -27,7 +27,7 @@ from electrum.gui.qt.util import (read_QIcon, HelpLabel, MessageBoxMixin,
                                   MONOSPACE_FONT, WindowModalDialog,
                                   Buttons, OkButton)
 
-from .jm_util import guess_address_script_type, filter_log_line, JMStates
+from .jm_util import guess_address_script_type, JMStates
 from .jmclient import (JMClientProtocolFactory, Taker, get_max_cj_fee_values,
                        fidelity_bond_weighted_order_choose, get_schedule,
                        ScheduleGenerationErrorNoFunds, schedule_to_text,
@@ -63,49 +63,6 @@ class GUIConfig:
 
 
 GUIconf = GUIConfig()
-
-
-class FilteredPlainTextEdit(QPlainTextEdit):
-
-    def contextMenuEvent(self, event):
-        f_copy = QAction(_('Copy filtered'), self)
-        f_copy.triggered.connect(lambda checked: self.copy_filtered())
-        f_copy.setEnabled(self.textCursor().hasSelection())
-
-        copy_icon = QIcon.fromTheme('edit-copy')
-        if copy_icon:
-            f_copy.setIcon(copy_icon)
-
-        menu = self.createStandardContextMenu(event.pos())
-        menu.insertAction(menu.actions()[0], f_copy)
-        menu.exec(event.globalPos())
-
-    def copy_filtered(self):
-        cursor = self.textCursor()
-        if not cursor.hasSelection():
-            return
-
-        all_lines = self.toPlainText().splitlines()
-        sel_beg = cursor.selectionStart()
-        sel_end = cursor.selectionEnd()
-        l_beg = 0
-        result_lines = []
-        for i in range(len(all_lines)):
-            cur_line = all_lines[i]
-            cur_len = len(cur_line)
-            l_end = l_beg + cur_len
-
-            if l_end > sel_beg and l_beg < sel_end:
-                filtered_line = filter_log_line(cur_line)
-                l_sel_start = None if sel_beg <= l_beg else sel_beg - l_beg
-                l_sel_end = None if sel_end >= l_end else sel_end - l_beg
-                clipped_line = filtered_line[l_sel_start:l_sel_end]
-                result_lines.append(clipped_line)
-
-            l_beg += (cur_len + 1)
-            if l_beg > sel_end:
-                break
-        QApplication.clipboard().setText('\n'.join(result_lines))
 
 
 class WarnExDialog(WindowModalDialog):
@@ -340,7 +297,7 @@ class JMDlg(QtEventListener, QDialog, MessageBoxMixin):
         # setup logging
         self.log_handler = self.jmman.log_handler
         self.logger = self.jmman.logger
-        self.log_view = FilteredPlainTextEdit()
+        self.log_view = QPlainTextEdit()
         self.log_view.setMaximumBlockCount(1000)
         self.log_view.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOn)

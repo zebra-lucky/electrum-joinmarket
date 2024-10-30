@@ -9,7 +9,8 @@ from electrum.bitcoin import sha256
 from electrum.transaction import Transaction
 from electrum.util import to_bytes, bfh
 
-from electrum.plugins.joinmarket.jm_util import verify_txin_sig
+from electrum.plugins.joinmarket.jm_util import (
+    verify_txin_sig, add_txin_sig, add_txin_descriptor)
 from electrum.plugins.joinmarket.jmbase import utxostr_to_utxo, utxo_to_utxostr
 from electrum.plugins.joinmarket.jmclient import (
     PoDLE, getNUMS, getP2, PoDLEError)
@@ -442,6 +443,47 @@ class TxUtilTestCase(JMTestCase):
         'c012cd38be692903c13463034d81012102218051896d4a685aed1437eb2e982741a8'
         '2c232284158ab6edae97bc94cb0ba9abaa2600')
 
+    async def test_add_txin_sig(self):
+        jmman = self.jmman
+        txin_idx = 1
+        tx = Transaction(self.raw_tx)
+        sigmsg = tx.inputs()[txin_idx].script_sig
+        add_txin_sig(jmman, self.raw_tx, txin_idx, self.prevtx, sigmsg)
+        add_txin_sig(jmman, self.raw_tx, txin_idx+5, self.prevtx, sigmsg)
+        add_txin_sig(
+            jmman, self.raw_tx, txin_idx, self.prevtx_native_segwit, sigmsg)
+
+    async def test_add_txin_descriptor(self):
+        jmman = self.jmman
+        txin_idx = 1
+        tx = Transaction(self.raw_tx)
+        txin = tx.inputs()[txin_idx]
+        script_sig = txin.script_sig
+        hex_pub = script_sig[73:].hex()
+        add_txin_descriptor(jmman, self.raw_tx, txin_idx, self.prevtx, hex_pub)
+        add_txin_descriptor(
+            jmman, self.raw_tx, txin_idx+5, self.prevtx, hex_pub)
+        add_txin_descriptor(
+            jmman, self.raw_tx, txin_idx, self.prevtx_native_segwit, hex_pub)
+
+        txin_idx = 0
+        tx = Transaction(self.raw_tx_native_segwit)
+        txin = tx.inputs()[txin_idx]
+        witness = txin.witness
+        hex_pub = witness[74:].hex()
+        add_txin_descriptor(
+            jmman, self.raw_tx_native_segwit, txin_idx,
+            self.prevtx_native_segwit, hex_pub)
+
+        txin_idx = 0
+        tx = Transaction(self.raw_tx_p2sh_segwit)
+        txin = tx.inputs()[txin_idx]
+        witness = txin.witness
+        hex_pub = witness[74:].hex()
+        add_txin_descriptor(
+            jmman, self.raw_tx_p2sh_segwit, txin_idx,
+            self.prevtx_p2sh_segwit, hex_pub)
+
     async def test_verify_txin_sig(self):
         jmman = self.jmman
         txin_idx = 1
@@ -504,3 +546,10 @@ class TxUtilTestCase(JMTestCase):
         tx.inputs()[txin_idx].script_sig = bytes(script_sig)
         raw_tx = tx.serialize_to_network()
         assert not verify_txin_sig(jmman, raw_tx, txin_idx, self.prevtx)
+
+    async def test_clear_log(self):
+        jmman = self.jmman
+        jmman.log_handler.notify = True
+        for i in range(1010):
+            jmman.logger.debug('test clear log')
+        jmman.log_handler.clear_log()

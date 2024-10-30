@@ -88,6 +88,8 @@ def guess_address_script_type(addr):
 def add_txin_sig(jmman, tx, txin_idx, txin_prevtx, sigmsg):
     if not isinstance(tx, Transaction):
         tx = Transaction(tx)
+    if not isinstance(tx, PartialTransaction):
+        tx = PartialTransaction.from_tx(tx)
     inputs = tx.inputs()
     if len(inputs) - 1 < txin_idx:
         jmman.logger.info(f'add_txin_sig: txin_idx {txin_idx} too big')
@@ -131,6 +133,8 @@ def add_txin_sig(jmman, tx, txin_idx, txin_prevtx, sigmsg):
 def add_txin_descriptor(jmman, tx, txin_idx, txin_prevtx, pubk_hex):
     if not isinstance(tx, Transaction):
         tx = Transaction(tx)
+    if not isinstance(tx, PartialTransaction):
+        tx = PartialTransaction.from_tx(tx)
     inputs = tx.inputs()
     if len(inputs) - 1 < txin_idx:
         jmman.logger.debug(f'add_txin_descriptor: txin_idx {txin_idx} too big')

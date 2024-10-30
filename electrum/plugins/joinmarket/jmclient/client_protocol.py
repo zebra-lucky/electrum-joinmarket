@@ -232,7 +232,7 @@ class JMTakerClientProtocol(JMClientProtocol):
         return {'accepted': True}
 
     @commands.JMSetupDone.responder
-    def on_JM_SETUP_DONE(self):
+    async def on_JM_SETUP_DONE(self):
         self.logger.info("JM daemon setup complete")
         # The daemon is ready and has requested the orderbook
         # from the pit; we can request the entire orderbook

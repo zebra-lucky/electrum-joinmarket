@@ -2,7 +2,6 @@
 
 import attr
 import logging
-import re
 from enum import IntEnum
 
 import electrum_ecc as ecc

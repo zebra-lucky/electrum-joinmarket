@@ -6,7 +6,7 @@ import asyncio
 from functools import partial
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import (QIcon, QTextCursor, QIntValidator, QFont,
+from PyQt6.QtGui import (QTextCursor, QIntValidator, QFont,
                          QKeySequence, QColor, QBrush, QAction)
 from PyQt6.QtWidgets import (QWidget, QGridLayout, QHBoxLayout, QLabel,
                              QVBoxLayout, QDialog, QPushButton, QTabWidget,

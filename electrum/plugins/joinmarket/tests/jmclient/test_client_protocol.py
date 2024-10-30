@@ -11,27 +11,25 @@ from electrum.plugins.joinmarket.jmbase import commands
 from electrum.plugins.joinmarket.jmbase import bintohex
 from electrum.plugins.joinmarket import jmbitcoin as bitcoin
 from electrum.plugins.joinmarket.jmclient import (
-    Taker, JMClientProtocolFactory, JMTakerClientProtocol)
+    Taker, JMClientProtocolFactory, JMTakerClientProtocol, NO_ROUNDING,
+    get_max_cj_fee_values, fidelity_bond_weighted_order_choose)
 
 from electrum.plugins.joinmarket.tests import JMTestCase
 
 from .taker_test_data import t_raw_signed_tx
-from .commontest import default_max_cj_fee
 
-
-test_completed = False
-clientfactory = None
 
 LOGGING_SHORTCUT = 'J'
 jlog = get_logger(__name__)
 jlog.addFilter(ShortcutInjectingFilter(shortcut=LOGGING_SHORTCUT))
 
 
-def dummy_taker_finished(res, fromtx, waittime=0.0):
-    pass
-
-
 class DummyTaker(Taker):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.failutxos = 0
+        self.failinit = 0
 
     def set_fail_init(self, val):
         self.failinit = val
@@ -42,7 +40,7 @@ class DummyTaker(Taker):
     def default_taker_info_callback(self, infotype, msg):
         jlog.debug(infotype + ":" + msg)
 
-    def initialize(self, orderbook, fidelity_bonds_info):
+    async def initialize(self, orderbook, fidelity_bonds_info):
         """Once the daemon is active and has returned the current orderbook,
         select offers, re-initialize variables and prepare a commitment,
         then send it to the protocol to fill offers.
@@ -56,7 +54,7 @@ class DummyTaker(Taker):
             return (True, 1000000, "aa"*32, {'dummy': 'revelation'},
                     orderbook[:2])
 
-    def receive_utxos(self, ioauth_data):
+    async def receive_utxos(self, ioauth_data):
         """Triggered when the daemon returns utxo data from
         makers who responded; this is the completion of phase 1
         of the protocol
@@ -67,18 +65,12 @@ class DummyTaker(Taker):
             return (True, [x*64 + ":01" for x in ["a", "b", "c"]],
                     base64.b16decode(t_raw_signed_tx, casefold=True))
 
-    def on_sig(self, nick, sigb64):
+    async def on_sig(self, nick, sigb64):
         """For test, we exit 'early' on first message, since this marks the end
         of client-server communication with the daemon.
         """
         jlog.debug("We got a sig: " + sigb64)
-        end_test()
         return None
-
-
-class DummyWallet(object):
-    def get_wallet_id(self):
-        return 'aaaa'
 
 
 class JMBaseProtocol(commands.CallRemoteMock):
@@ -103,154 +95,196 @@ def show_receipt(name, *args):
                ",".join([str(x) for x in args]))
 
 
-def end_client(client):
-    pass
-
-
-def end_test():
-    global test_completed
-    test_completed = True
-    client = clientfactory.getClient()
-    commands.callLater(1, end_client, client)
-
-
 class JMTestServerProtocol(JMBaseProtocol):
 
     @commands.JMInit.responder
-    def on_JM_INIT(self, bcsource, network, chan_configs, minmakers,
-                   maker_timeout_sec, dust_threshold, blacklist_location):
+    async def on_JM_INIT(self, bcsource, network, chan_configs,
+                         minmakers, maker_timeout_sec,
+                         dust_threshold, blacklist_location):
         show_receipt("JMINIT", bcsource, network, chan_configs, minmakers,
                      maker_timeout_sec, dust_threshold, blacklist_location)
-        d = self.callRemote(commands.JMInitProto,
-                            nick_hash_length=1,
-                            nick_max_encoded=2,
-                            joinmarket_nick_header="J",
-                            joinmarket_version=5)
+        d = await self.callRemote(
+            commands.JMInitProto,
+            self.factory.proto_client,
+            nick_hash_length=1,
+            nick_max_encoded=2,
+            joinmarket_nick_header="J",
+            joinmarket_version=5
+        )
         self.defaultCallbacks(d)
         return {'accepted': True}
 
     @commands.JMStartMC.responder
-    def on_JM_START_MC(self, nick):
+    async def on_JM_START_MC(self, nick):
         show_receipt("STARTMC", nick)
         d = self.callRemote(commands.JMUp)
         self.defaultCallbacks(d)
         return {'accepted': True}
 
     @commands.JMSetup.responder
-    def on_JM_SETUP(self, role, initdata, use_fidelity_bond):
+    async def on_JM_SETUP(self, role, initdata, use_fidelity_bond):
         show_receipt("JMSETUP", role, initdata, use_fidelity_bond)
-        d = self.callRemote(commands.JMSetupDone)
+        d = await self.callRemote(commands.JMSetupDone,
+                                  self.factory.proto_client)
         self.defaultCallbacks(d)
         return {'accepted': True}
 
     @commands.JMRequestOffers.responder
-    def on_JM_REQUEST_OFFERS(self):
+    async def on_JM_REQUEST_OFFERS(self):
         show_receipt("JMREQUESTOFFERS")
         # build a huge orderbook to test BigString Argument
         orderbook = ["aaaa" for _ in range(15)]
         fidelitybonds = ["bbbb" for _ in range(15)]
-        d = self.callRemote(commands.JMOffers,
-                            orderbook=json.dumps(orderbook),
-                            fidelitybonds=json.dumps(fidelitybonds))
+        d = await self.callRemote(commands.JMOffers,
+                                  self.factory.proto_client,
+                                  orderbook=json.dumps(orderbook),
+                                  fidelitybonds=json.dumps(fidelitybonds))
         self.defaultCallbacks(d)
         return {'accepted': True}
 
     @commands.JMFill.responder
-    def on_JM_FILL(self, amount, commitment, revelation, filled_offers):
+    async def on_JM_FILL(self, amount, commitment, revelation, filled_offers):
         success = False if amount == -1 else True
         show_receipt("JMFILL", amount, commitment, revelation, filled_offers)
-        d = self.callRemote(commands.JMFillResponse,
-                            success=success,
-                            ioauth_data=['dummy', 'list'])
+        d = await self.callRemote(commands.JMFillResponse,
+                                  self.factory.proto_client, success=success,
+                                  ioauth_data=['dummy', 'list'])
         self.defaultCallbacks(d)
         return {'accepted': True}
 
     @commands.JMMakeTx.responder
-    def on_JM_MAKE_TX(self, nick_list, tx):
+    async def on_JM_MAKE_TX(self, nick_list, tx):
         show_receipt("JMMAKETX", nick_list, tx)
-        d = self.callRemote(commands.JMSigReceived,
-                            nick="dummynick",
-                            sig="xxxsig")
+        d = await self.callRemote(commands.JMSigReceived,
+                                  self.factory.proto_client,
+                                  nick="dummynick", sig="xxxsig")
         self.defaultCallbacks(d)
         # add dummy calls to check message sign and message verify
-        d2 = self.callRemote(commands.JMRequestMsgSig,
-                             nick="dummynickforsign",
-                             cmd="command1",
-                             msg="msgforsign",
-                             msg_to_be_signed="fullmsgforsign",
-                             hostid="hostid1")
+        d2 = await self.callRemote(commands.JMRequestMsgSig,
+                                   self.factory.proto_client,
+                                   nick="dummynickforsign",
+                                   cmd="command1",
+                                   msg="msgforsign",
+                                   msg_to_be_signed="fullmsgforsign",
+                                   hostid="hostid1")
         self.defaultCallbacks(d2)
         # To test, this must include a valid ecdsa sig
         fullmsg = "fullmsgforverify"
         priv = b"\xaa"*32 + b"\x01"
-        pub = bintohex(bitcoin.privkey_to_pubkey(priv))
+        pub = bintohex(bitcoin.privkey_to_pubkey(priv).get_public_key_bytes())
         sig = bitcoin.ecdsa_sign(fullmsg, priv)
-        d3 = self.callRemote(commands.JMRequestMsgSigVerify,
-                             msg="msgforverify",
-                             fullmsg=fullmsg,
-                             sig=sig,
-                             pubkey=pub,
-                             nick="dummynickforverify",
-                             hashlen=4,
-                             max_encoded=5,
-                             hostid="hostid2")
+        d3 = await self.callRemote(commands.JMRequestMsgSigVerify,
+                                   self.factory.proto_client,
+                                   msg="msgforverify",
+                                   fullmsg=fullmsg,
+                                   sig=sig,
+                                   pubkey=pub,
+                                   nick="dummynickforverify",
+                                   hashlen=4,
+                                   max_encoded=5,
+                                   hostid="hostid2")
         self.defaultCallbacks(d3)
-        d4 = self.callRemote(commands.JMSigReceived,
-                             nick="dummynick",
-                             sig="dummysig")
+        d4 = await self.callRemote(commands.JMSigReceived,
+                                   self.factory.proto_client,
+                                   nick="dummynick", sig="dummysig")
         self.defaultCallbacks(d4)
         return {'accepted': True}
 
+    @commands.JMPushTx.responder
+    async def on_JM_PushTx(self, nick, tx):
+        show_receipt("JMPUSHTX", nick, tx)
+        return {'accepted': True}
+
     @commands.JMMsgSignature.responder
-    def on_JM_MSGSIGNATURE(self, nick, cmd, msg_to_return, hostid):
+    async def on_JM_MSGSIGNATURE(self, nick, cmd, msg_to_return, hostid):
         show_receipt("JMMSGSIGNATURE", nick, cmd, msg_to_return, hostid)
         return {'accepted': True}
 
     @commands.JMMsgSignatureVerify.responder
-    def on_JM_MSGSIGNATURE_VERIFY(self, verif_result, nick, fullmsg, hostid):
+    async def on_JM_MSGSIGNATURE_VERIFY(self, verif_result, nick, fullmsg,
+                                        hostid):
         show_receipt("JMMSGSIGVERIFY", verif_result, nick, fullmsg, hostid)
         return {'accepted': True}
 
 
-class JMTestServerProtocolFactory:
+class BaseClientProtocolTestCase(JMTestCase):
 
-    protocol = JMTestServerProtocol
+    def check_offers_callback(self, *args):
+        print('check_offers_callback', args)
 
+    def taker_info_callback(self, *args):
+        print('taker_info_callback', args)
 
-class DummyClientProtocolFactory(JMClientProtocolFactory):
-
-    def buildProtocol(self):
-        return JMTakerClientProtocol(self, self.client,
-                                     nick_priv=b"\xaa"*32 + b"\x01")
-
-
-class TrialTestJMClientProto(JMTestCase):
+    def taker_finished_callback(self, *args):
+        print('taker_finished_callback', args)
 
     async def asyncSetUp(self):
         await super().asyncSetUp()
 
-        global clientfactory
-        params = [[False, False], [True, False], [False, True], [-1, False]]
-        self.jmman.maker_timeout_sec = 1
-        clientfactories = []
-        takers = [
-            DummyTaker(
-                self.jmman,
-                ["a", "b"], default_max_cj_fee,
-                callbacks=(None, None, dummy_taker_finished))
-            for _ in range(len(params))]
-        for i, p in enumerate(params):
-            takers[i].set_fail_init(p[0])
-            takers[i].set_fail_utxos(p[1])
-            takers[i].testflag = True
-            if i != 0:
-                clientfactories.append(JMClientProtocolFactory(takers[i]))
-            else:
-                clientfactories.append(DummyClientProtocolFactory(takers[i]))
-                clientfactory = clientfactories[0]
+        jmman = self.jmman
+        jmconf = self.jmconf
+        jmconf.maker_timeout_sec = 1
+        jmconf.max_cj_fee_confirmed = True
+        self.schedule = [[0, 0, 2, 'INTERNAL', 0, NO_ROUNDING, 0]]
+        self.maxcjfee = get_max_cj_fee_values(jmman, None)
+        self.destaddrs = []
+        self.taker = DummyTaker(
+            jmman,
+            self.schedule,
+            self.maxcjfee,
+            order_chooser=fidelity_bond_weighted_order_choose,
+            callbacks=[self.check_offers_callback,
+                       self.taker_info_callback,
+                       self.taker_finished_callback],
+            tdestaddrs=self.destaddrs,
+            custom_change_address=None,
+            ignored_makers=jmman.jmw.ignored_makers
+        )
+        self.clientfactory = JMClientProtocolFactory(self.taker)
+        jmman.set_client_factory(self.clientfactory)
+        self.client_proto = self.clientfactory.getClient()
 
-    async def test_waiter(self):
-        return commands.deferLater(3, self._called_by_deffered)
 
-    async def _called_by_deffered(self):
-        pass
+class ClientProtocolTestCase(BaseClientProtocolTestCase):
+
+    async def test_on_JM_REQUEST_MSGSIG(self):
+        await self.client_proto.on_JM_REQUEST_MSGSIG(
+           nick="dummynickforsign", cmd="command1", msg="msgforsign",
+           msg_to_be_signed="fullmsgforsign", hostid="hostid1")
+        assert 0
+
+
+class TakerClientProtocolTestCase(BaseClientProtocolTestCase):
+
+    async def test_clientStart(self):
+        await self.client_proto.clientStart()
+
+    async def test_stallMonitor(self):
+        self.client_proto.stallMonitor(0)
+
+    async def test_on_JM_UP(self):
+        await self.client_proto.on_JM_UP()
+
+    async def test_on_JM_SETUP_DONE(self):
+        await self.client_proto.on_JM_SETUP_DONE()
+
+    async def test_on_JM_FILL_RESPONSE(self):
+        await self.client_proto.on_JM_FILL_RESPONSE(
+            success=True, ioauth_data={'dummy': 'ioauth'})
+
+    async def test_on_JM_OFFERS(self):
+        orderbook = ["aaaa" for _ in range(15)]
+        fidelitybonds = ["bbbb" for _ in range(15)]
+        await self.client_proto.on_JM_OFFERS(
+            orderbook=json.dumps(orderbook),
+            fidelitybonds=json.dumps(fidelitybonds))
+
+    async def test_on_JM_SIG_RECEIVED(self):
+        await self.client_proto.on_JM_SIG_RECEIVED(
+            nick="dummynick", sig="xxxsig")
+
+    async def test_get_offers(self):
+        await self.client_proto.get_offers()
+
+    async def test_push_tx(self):
+        await self.client_proto.push_tx("dummynick", b"deadbeef")

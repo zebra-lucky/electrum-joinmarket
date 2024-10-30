@@ -149,7 +149,7 @@ def multiply(s: bytes, pub: bytes, return_serialized: bool = True) -> bytes:
     return res.get_public_key_bytes()
 
 
-def add_pubkeys(pubkeys: List[bytes]) -> ecc.ECPubkey:
+def add_pubkeys(pubkeys: List[bytes]) -> bytes:
     '''Input a list of binary compressed pubkeys
     and return their sum as a binary compressed pubkey.'''
     pubkey_list = [ecc.ECPubkey(x) for x in pubkeys]

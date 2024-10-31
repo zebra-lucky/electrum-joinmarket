@@ -9,10 +9,6 @@ from electrum.plugins.joinmarket.tests import JMTestCase
 test_completed = False
 
 
-class JMProtocolError(Exception):
-    pass
-
-
 class JMBaseProtocol(commands.CallRemoteMock):
 
     def checkClientResponse(self, response):

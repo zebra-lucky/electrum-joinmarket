@@ -196,8 +196,6 @@ class JMConf:
             return constants.net.NET_NAME
         elif constants.net.NET_NAME == 'regtest':
             return 'testnet'
-        elif constants.net.NET_NAME == 'testnet4':
-            return 'testnet'
         else:
             return constants.net.NET_NAME
 

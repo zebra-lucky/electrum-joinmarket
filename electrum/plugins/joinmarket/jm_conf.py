@@ -88,6 +88,16 @@ class JMConf:
                 '.onion:5222',
     }
 
+    MESSAGING_ONION_TESTNET4 = {
+        'type': 'onion',
+        'enabled': True,
+        'socks5_host': 'localhost',
+        'socks5_port': 9050,
+        'directory_nodes':
+            'qibbq5s7come4ihuroa232pf2pf6kse4wsu3n753fjkyfn6bhyllhdyd'
+                '.onion:5222',
+    }
+
     MESSAGING_ONION_REGTEST = {
         'type': 'onion',
         'enabled': True,
@@ -147,7 +157,16 @@ class JMConf:
         'irc2': copy.deepcopy(MESSAGING_IRC_CHANNEL),
         'onion': copy.deepcopy(MESSAGING_ONION_TESTNET),
     }
+    DEFAULT_MSG_CHANNELS_TESTNET['irc1']['enabled'] = False
     DEFAULT_MSG_CHANNELS_TESTNET['irc2']['enabled'] = False
+
+    DEFAULT_MSG_CHANNELS_TESTNET4 = {
+        'irc1': copy.deepcopy(MESSAGING_IRC_CHANNEL),
+        'irc2': copy.deepcopy(MESSAGING_IRC_CHANNEL),
+        'onion': copy.deepcopy(MESSAGING_ONION_TESTNET4),
+    }
+    DEFAULT_MSG_CHANNELS_TESTNET4['irc1']['enabled'] = False
+    DEFAULT_MSG_CHANNELS_TESTNET4['irc2']['enabled'] = False
 
     DEFAULT_MSG_CHANNELS_REGTEST = {
         'irc1': copy.deepcopy(MESSAGING_IRC_CHANNEL),
@@ -176,6 +195,8 @@ class JMConf:
         if not constants.net.TESTNET:
             return constants.net.NET_NAME
         elif constants.net.NET_NAME == 'regtest':
+            return 'testnet'
+        elif constants.net.NET_NAME == 'testnet4':
             return 'testnet'
         else:
             return constants.net.NET_NAME
@@ -476,6 +497,8 @@ class JMConf:
             return copy.deepcopy(self.DEFAULT_MSG_CHANNELS)
         elif constants.net.NET_NAME == 'regtest':
             return copy.deepcopy(self.DEFAULT_MSG_CHANNELS_REGTEST)
+        elif constants.net.NET_NAME == 'testnet4':
+            return copy.deepcopy(self.DEFAULT_MSG_CHANNELS_TESTNET4)
         else:
             return copy.deepcopy(self.DEFAULT_MSG_CHANNELS_TESTNET)
 

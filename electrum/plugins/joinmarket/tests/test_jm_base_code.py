@@ -245,6 +245,13 @@ class JMBaseCodeMixinTestCase(JMTestCase):
         assert await jmw.make_keypairs_cache(None, None)
         assert jmw.get_key_from_addr(addr) == keypair[1]
 
+    async def test_get_wif_path(self):
+        jmw = self.jmw
+        w = jmw.wallet
+        idx = w.get_address_index('tb1qpjkqrhz3kxsg93c5cw2axhdy39wqy36u9ygzdk')
+        wif = 'p2wpkh:cUFGYhBPap7YEr4yq1BX1iVGHqmYK9udFnXmQz2LxRKBv11PXyf3'
+        assert jmw.get_wif_path(idx, None) == wif
+
     async def test_get_script_from_path(self):
         jmw = self.jmw
         w = jmw.wallet

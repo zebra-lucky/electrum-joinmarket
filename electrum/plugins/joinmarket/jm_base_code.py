@@ -12,7 +12,7 @@ import electrum_ecc as ecc
 
 from electrum.bip32 import convert_bip32_intpath_to_strpath
 from electrum.bitcoin import (script_to_scripthash, address_to_script,
-                              construct_script, opcodes)
+                              construct_script, opcodes, serialize_privkey)
 from electrum.crypto import sha256
 from electrum.descriptor import get_singlesig_descriptor_from_legacy_leaf
 from electrum.transaction import (get_address_from_output_script,
@@ -344,6 +344,14 @@ class JMBaseCodeMixin:
             path = w.get_address_index(addr)
             privk, _ = w.keystore.get_private_key(path, None)
             return privk
+
+    # jmclient/wallet.py BaseWallet.get_wif_path
+    def get_wif_path(self, path, password):
+        w = self.wallet
+        addr = self.get_address_from_path(path)
+        privk, compressed = w.keystore.get_private_key(path, password)
+        txin_type = w.get_txin_type(addr)
+        return serialize_privkey(privk, compressed, txin_type)
 
     # jmclient/wallet.py BaseWallet/BIP32Wallet get_script_from_path
     def get_script_from_path(self, path) -> bytes:

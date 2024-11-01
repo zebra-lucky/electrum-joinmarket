@@ -351,7 +351,7 @@ def get_utxo_status_string(utxos, utxos_enabled, path):
 
 def wallet_display(jmman, showprivkey, displayall=False,
                    serialized=True, summarized=False, mixdepth=None,
-                   jsonified=False):
+                   jsonified=False, password=None):
     """build the walletview object,
     then return its serialization directly if serialized,
     else return the WalletView object.
@@ -415,8 +415,7 @@ def wallet_display(jmman, showprivkey, displayall=False,
                 balance, status = get_addr_status(
                     path, utxos[m], utxos_enabled[m], is_new, address_type)
                 if showprivkey:
-                    # privkey = jmman.get_wif_path(path)  FIXME no get_wif_path
-                    privkey = ''  # FIXME
+                    privkey = jmman.jmw.get_wif_path(path, password)
                 else:
                     privkey = ''
                 if (displayall or balance > 0 or

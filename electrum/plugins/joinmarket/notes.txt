@@ -1,6 +1,7 @@
 -------------------------------------------------------------------------------
 plugin:
     - покращення покриття тестами
+    - jm_base_code.py: add get_wif_path (need password if wallet/ks encrypted)
     - потрібно якось документувати
     - qml gui
     - jm_qt_obwatch: advanced sorting by columns, filter by text

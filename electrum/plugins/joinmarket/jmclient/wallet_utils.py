@@ -415,7 +415,8 @@ def wallet_display(jmman, showprivkey, displayall=False,
                 balance, status = get_addr_status(
                     path, utxos[m], utxos_enabled[m], is_new, address_type)
                 if showprivkey:
-                    privkey = jmman.get_wif_path(path)
+                    # privkey = jmman.get_wif_path(path)  FIXME no get_wif_path
+                    privkey = ''  # FIXME
                 else:
                     privkey = ''
                 if (displayall or balance > 0 or

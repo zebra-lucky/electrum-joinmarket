@@ -393,8 +393,6 @@ def main():
         constants.BitcoinSimnet.set_as_network()
     elif config.get('signet'):
         constants.BitcoinSignet.set_as_network()
-    elif config.get('mainnet'):
-        constants.BitcoinMainnet.set_as_network()
     else:
         constants.BitcoinTestnet4.set_as_network()
 

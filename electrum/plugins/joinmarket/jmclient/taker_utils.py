@@ -343,7 +343,7 @@ def unconf_update(taker, tumble_log, addtolog=False):
         hramt = taker.cjamount
         tumble_log.info(human_readable_schedule_entry(
             taker.schedule[taker.schedule_index], hramt, hrdestn))
-        tumble_log.info("Txid was: " + taker.txid)
+        tumble_log.info(f"Txid was: {taker.txid}")
 
 
 def tumbler_taker_finished_update(taker, tumble_log, options,

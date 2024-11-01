@@ -18,9 +18,12 @@ from electrum.plugins.joinmarket.jmbitcoin import privkey_to_pubkey
 from electrum.plugins.joinmarket.jmbase import utxostr_to_utxo
 from electrum.plugins.joinmarket import jmbitcoin as btc
 from electrum.plugins.joinmarket.jmclient import Taker, NO_ROUNDING
+from electrum.plugins.joinmarket.jmclient.taker_utils import (
+    get_total_tumble_amount, restart_wait, unconf_update,
+    tumbler_taker_finished_update, tumbler_filter_orders_callback)
 from electrum.plugins.joinmarket.jm_util import add_txin_descriptor
 
-from electrum.plugins.joinmarket.tests import JMTestCase
+from electrum.plugins.joinmarket.tests import JMTestCase, tx1_txid
 
 from .commontest import default_max_cj_fee, DummyJMWallet
 from .taker_test_data import (
@@ -745,3 +748,75 @@ class TakerTestCase(JMTestCase, ParametrizedTestCase):
         assert taker.auth_counterparty(sig, auth_pub, maker_pub)
         assert not taker.auth_counterparty(sig, auth_pub_tweaked, maker_pub)
         assert not taker.auth_counterparty(sig_tweaked, auth_pub, maker_pub)
+
+
+class TakerUtilsTestCase(JMTestCase):
+
+    async def test_get_total_tumble_amount(self):
+        schedule = [[4, 0, 2, 'INTERNAL', 0.5, 16, 0],
+                    [0, 0, 2, 'INTERNAL', 0.5, 16, 0],
+                    [1, 0.48524737930877715, 2, 'INTERNAL', 0.5, 16, 0],
+                    [1, 0, 2, 'INTERNAL', 0.5, 16, 0],
+                    [2, 0.06803272390931159, 2, 'INTERNAL', 0.5, 16, 0],
+                    [2, 0, 2, 'INTERNAL', 0.5, 16, 0]]
+
+        mixdepth_balance_dict = {
+            4: 1000000,
+            0: 2000000,
+            1: 3000000,
+            2: 2000000,
+        }
+
+        assert get_total_tumble_amount(
+            mixdepth_balance_dict, schedule) == 8000000
+
+    async def test_restart_wait(self):
+        restart_wait(self.jmman,  tx1_txid)
+
+    async def test_unconf_update(self):
+
+        def filter_orders(orders_feesl, cjamount):
+            return True
+
+        jmman = self.jmman
+        taker = get_taker(jmman, filter_orders=filter_orders)
+        taker.schedule = [[0, 20000000, 3,
+                           "mnsquzxrHXpFsZeL42qwbKdCP2y1esN3qw",
+                           0, NO_ROUNDING]]
+        orderbook = copy.deepcopy(t_orderbook)
+        await taker.initialize(orderbook, [])
+        taker.orderbook = copy.deepcopy(t_chosen_orders)
+        unconf_update(taker, jmman.tumble_log, addtolog=True)
+
+    async def test_tumbler_taker_finished_update(self):
+
+        def filter_orders(orders_feesl, cjamount):
+            return True
+
+        jmman = self.jmman
+        taker = get_taker(jmman, filter_orders=filter_orders)
+        taker.schedule = [[0, 20000000, 3,
+                           "mnsquzxrHXpFsZeL42qwbKdCP2y1esN3qw",
+                           0, NO_ROUNDING]]
+        orderbook = copy.deepcopy(t_orderbook)
+        await taker.initialize(orderbook, [])
+        taker.orderbook = copy.deepcopy(t_chosen_orders)
+        tumbler_taker_finished_update(
+            taker, jmman.tumble_log, options=True, res=False, fromtx=False)
+
+    async def test_tumbler_filter_orders_callback(self):
+
+        def filter_orders(orders_feesl, cjamount):
+            return True
+
+        jmman = self.jmman
+        taker = get_taker(jmman, filter_orders=filter_orders)
+        taker.schedule = [[0, 20000000, 3,
+                           "mnsquzxrHXpFsZeL42qwbKdCP2y1esN3qw",
+                           0, NO_ROUNDING]]
+        orderbook = copy.deepcopy(t_orderbook)
+        await taker.initialize(orderbook, [])
+        taker.orderbook = copy.deepcopy(t_chosen_orders)
+        orders_fees = (None, 1000)
+        tumbler_filter_orders_callback(
+            self.jmman, orders_fees, 100000, taker)

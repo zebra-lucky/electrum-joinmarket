@@ -46,27 +46,25 @@ class TorClientService:
         self.connected_deferred = SimpleDeferredMock()
         return self.connected_deferred
 
-    async def _create_connection(self):
+    async def _proxy_create_conn(self):
+        self.transport, self.protocol = await self.proxy.create_connection(
+            self.factory.buildProtocol, self.host, self.port)
+
+    async def _start_service(self):
         if self.stop_task and not self.stop_task.done():
             await self.stop_task
         self.stop_task = None
 
         fail_count = 0
-        proxy = self.proxy
-        timeout = self.timeout
-
-        async def proxy_create_conn():
-            self.transport, self.protocol = await proxy.create_connection(
-                self.factory.buildProtocol, self.host, self.port)
-
         while fail_count < self.fail_after_failures:
             try:
-                await asyncio.wait_for(proxy_create_conn(), timeout=timeout)
+                await asyncio.wait_for(self._proxy_create_conn(),
+                                       timeout=self.timeout)
                 if self.connected_deferred and self.connected_deferred.cb:
                     self.connected_deferred.cb(self.protocol)
                 break
             except BaseException as e:
-                self.logger.error(f'create_connection: {repr(e)}')
+                self.logger.error(f'_start_service: {repr(e)}')
                 fail_count += 1
                 if fail_count < self.fail_after_failures:
                     continue
@@ -74,19 +72,22 @@ class TorClientService:
                     self.connected_deferred.errb(e)
 
     def startService(self):
-        self.srv_task = asyncio.create_task(self._create_connection())
+        self.srv_task = asyncio.create_task(self._start_service())
 
     async def _stop_service(self):
-        if self.srv_task and not self.srv_task.done():
-            self.srv_task.cancel()
-        self.srv_task = None
+        try:
+            if self.srv_task and not self.srv_task.done():
+                self.srv_task.cancel()
+            self.srv_task = None
 
-        if self.transport:
-            self.transport.close()
-        self.transport = None
-        self.protocol = None
-        if self.stop_deferred and self.stop_deferred.cb:
-            self.stop_deferred.cb(None)
+            if self.transport:
+                self.transport.close()
+            self.transport = None
+            self.protocol = None
+            if self.stop_deferred and self.stop_deferred.cb:
+                self.stop_deferred.cb(None)
+        except BaseException as e:
+            self.logger.error(f'_stop_service: {repr(e)}')
 
     def stopService(self):
         self.stop_deferred = SimpleDeferredMock()

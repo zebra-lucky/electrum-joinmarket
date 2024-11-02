@@ -250,6 +250,7 @@ class OnionPeer:
                  location_tuple: Tuple[str, int],
                  directory: bool = False, nick: str = "",
                  handshake_callback: Callable = None):
+        self.client_service_cls = TorClientService
         # reference to the managing OnionMessageChannel instance is
         # needed so that we know where to send the messages received
         # from this peer:
@@ -432,7 +433,7 @@ class OnionPeer:
         # non-default timeout; needs to be much lower than our
         # 'wait at least a minute for the IRC connections to come up',
         # which is used for *all* message channels, together.
-        self.reconnecting_service = TorClientService(
+        self.reconnecting_service = self.client_service_cls(
             self.factory, CONNECT_TO_ONION_TIMEOUT,
             self.socks5_host, self.socks5_port, self.hostname, self.port)
         # if we want to actually do something about an unreachable host,

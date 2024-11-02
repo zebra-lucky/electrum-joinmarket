@@ -28,8 +28,8 @@ class TorClientService:
         self.factory = factory
         self.logger = factory.logger
         self.timeout = timeout
-        self.proxy = aiorpcx.SOCKSProxy(
-            f'{socks5_host}:{socks5_port}', aiorpcx.SOCKS5, None)
+        self.socks5_host = socks5_host
+        self.socks5_port = socks5_port
         self.host = host
         self.port = port
         self.fail_after_failures = 1
@@ -47,7 +47,9 @@ class TorClientService:
         return self.connected_deferred
 
     async def _proxy_create_conn(self):
-        self.transport, self.protocol = await self.proxy.create_connection(
+        proxy = aiorpcx.SOCKSProxy(
+            f'{self.socks5_host}:{self.socks5_port}', aiorpcx.SOCKS5, None)
+        self.transport, self.protocol = await proxy.create_connection(
             self.factory.buildProtocol, self.host, self.port)
 
     async def _start_service(self):

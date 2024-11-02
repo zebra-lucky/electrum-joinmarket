@@ -269,6 +269,13 @@ class OnionPeer:
         # directories and onion-serving peers, sending
         # messages backwards on a connection created towards them).
         self.alternate_location = ""
+        if self.hostname != NOT_SERVING_ONION_HOSTNAME:
+            # There is no harm in always setting it by default;
+            # it only gets used if we don't have an outbound.
+            self.set_alternate_location(location_tuple_to_str(
+                location_tuple))
+        if directory and not self.hostname:
+            raise OnionPeerDirectoryWithoutHostError()
         self.directory = directory
         self._status = PEER_STATUS_UNCONNECTED
         # A function to be called to initiate a handshake;
@@ -285,6 +292,9 @@ class OnionPeer:
         # don't try to connect more than once
         # TODO: prefer state machine update
         self.connecting = False
+
+    def set_alternate_location(self, location_string: str) -> None:
+        self.alternate_location = location_string
 
     def update_status(self, destn_status: int) -> None:
         """ Wrapping state updates to enforce:

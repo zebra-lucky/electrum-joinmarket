@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-'''Tests of joinmarket bots end-to-end (including IRC and bitcoin) '''
-
 import asyncio
 import io
 
@@ -175,22 +173,24 @@ class IRCBaseTestCase(JMTestCase):
         await self.mcc2.run()
         self.irc2 = self.mc2.tx_irc_client
 
+    async def asyncTearDown(self):
+
         async def cb(m):
             # don't try to reconnect
             m.give_up = True
             await m.shutdown()
 
-        self.addCleanup(cb, self.mc)
-        self.addCleanup(cb, self.mc2)
+        await cb(self.mc)
+        await cb(self.mc2)
 
 
 class IRCMessageChannelTestCase(IRCBaseTestCase):
 
     async def test_wlog(self):
-        l = self.logger
-        wlog(l, 'INFO', 'test info wlog')
-        wlog(l, 'WARNING', 'test warning wlog')
-        wlog(l, 'test debug wlog', 'test', b'wlog', 1e9, 5, None)
+        log = self.logger
+        wlog(log, 'INFO', 'test info wlog')
+        wlog(log, 'WARNING', 'test warning wlog')
+        wlog(log, 'test debug wlog', 'test', b'wlog', 1e9, 5, None)
 
     async def test_get_irc_nick(self):
         assert get_irc_nick('@dummynick! text') == '@dummynick'

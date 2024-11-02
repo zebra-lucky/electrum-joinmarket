@@ -8,7 +8,8 @@ import io
 from electrum.plugins.joinmarket.jmbase import commands
 from electrum.plugins.joinmarket.jmdaemon import (
     IRCMessageChannel, MessageChannelCollection)
-from electrum.plugins.joinmarket.jmdaemon.irc import wlog, TxIRCFactory
+from electrum.plugins.joinmarket.jmdaemon.irc import (
+    wlog, get_irc_nick, get_config_irc_channel, TxIRCFactory)
 from electrum.plugins.joinmarket.jmdaemon.irc_support import IRCClientService
 
 from electrum.plugins.joinmarket.tests import JMTestCase
@@ -16,11 +17,13 @@ from electrum.plugins.joinmarket.tests import JMTestCase
 
 class DummyTransport(asyncio.Transport):
 
-    def __init__(self):
+    def __init__(self, logger):
         super().__init__()
         self._t = io.BytesIO(b'')
+        self.logger = logger
 
     def write(self, data):
+        self.logger.debug(f'DummyTransport.write: {data}')
         self._t.write(data)
 
     def close(self):
@@ -32,7 +35,7 @@ class DummyIRCClientService(IRCClientService):
     async def _dummy_create_conn(self, sslc):
         self.logger.debug(f'_dummy_create_conn: {self.factory.buildProtocol}, '
                           f'{self.host}:{self.port}, {sslc}')
-        transport = DummyTransport()
+        transport = DummyTransport(self.logger)
         protocol = self.factory.buildProtocol()
         protocol.connection_made(transport)
         return transport, protocol
@@ -77,10 +80,10 @@ class DummyMC(IRCMessageChannel):
 class IRCMessageChannelTestCase(JMTestCase):
 
     def on_connect(self, x):
-        print('simulated on-connect')
+        print('simulated on-connect', x)
 
     def on_welcome(self, mc):
-        print('simulated on-welcome')
+        print('simulated on-welcome', mc)
         mc.tx_irc_client.lineRate = 0.2
         if mc.nick == "irc_publisher":
             d = commands.deferLater(3.0, self.junk_pubmsgs, mc)
@@ -89,7 +92,7 @@ class IRCMessageChannelTestCase(JMTestCase):
             d.addCallback(self.junk_fill)
 
     def on_disconnect(self, x):
-        print('simulated on-disconnect')
+        print('simulated on-disconnect', x)
 
     def on_order_seen(self, dummy, counterparty, oid, ordertype, minsize,
                       maxsize, txfee, cjfee):
@@ -168,9 +171,7 @@ class IRCMessageChannelTestCase(JMTestCase):
         self.mc, self.mcc = self.getmc("irc_publisher")
         self.mc2, self.mcc2 = self.getmc("irc_receiver")
         await self.mcc.run()
-        #self.mc.irc_factory.buildProtocol()
         await self.mcc2.run()
-        #self.mc2.irc_factory.buildProtocol()
 
         async def cb(m):
             # don't try to reconnect
@@ -180,5 +181,37 @@ class IRCMessageChannelTestCase(JMTestCase):
         self.addCleanup(cb, self.mc)
         self.addCleanup(cb, self.mc2)
 
-    async def test_setup(self):
-        assert 0
+    async def test_wlog(self):
+        l = self.logger
+        wlog(l, 'INFO', 'test info wlog')
+        wlog(l, 'WARNING', 'test warning wlog')
+        wlog(l, 'test debug wlog', 'test', b'wlog', 1e9, 5, None)
+
+    async def test_get_irc_nick(self):
+        assert get_irc_nick('@dummynick! text') == '@dummynick'
+        assert get_irc_nick('@verylongdummynick! text') == '@verylongdummyni'
+
+    async def test_get_config_irc_channel(self):
+        chan = 'joinmarket-pit'
+        assert get_config_irc_channel(chan, 'testnet') == f'#{chan}-test'
+        assert get_config_irc_channel(chan, 'testnet4') == f'#{chan}-test4'
+        assert get_config_irc_channel(chan, 'signet') == f'#{chan}-sig'
+        assert get_config_irc_channel(chan, 'mainnet') == f'#{chan}'
+
+    async def test_factory_clientConnectionLost(self):
+        self.mc.irc_factory.clientConnectionLost('testreason')
+
+    async def test_factory_clientConnectionFailed(self):
+        self.mc.irc_factory.clientConnectionFailed('testreason')
+
+    async def test_pubmsg(self):
+        await self.mc._pubmsg('testmsg')
+
+    async def test_privmsg(self):
+        await self.mc._privmsg('dummynick', "fill", "0 10000000 abcdef")
+
+    async def test_change_nick(self):
+        self.mc.change_nick('newdummynick')
+
+    async def test_announce_orders(self):
+        await self.mc._announce_orders(["!abc def gh 0001"]*30)

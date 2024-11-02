@@ -33,10 +33,6 @@ def wlog(log, *x):
         log.debug(msg)
 
 
-def get_irc_text(line):
-    return line[line[1:].find(':') + 2:]
-
-
 def get_irc_nick(source):
     full_nick = source[0:source.find('!')]
     return full_nick[:NICK_MAX_ENCODED+2]

@@ -9,7 +9,8 @@ from electrum.plugins.joinmarket.jmdaemon import (
 from electrum.plugins.joinmarket.jmdaemon.onionmc import (
     PEER_STATUS_UNCONNECTED, PEER_STATUS_CONNECTED, PEER_STATUS_HANDSHAKED,
     PEER_STATUS_DISCONNECTED, NOT_SERVING_ONION_HOSTNAME, OnionPeerError,
-    OnionCustomMessageDecodingError, OnionCustomMessage, JM_MESSAGE_TYPES)
+    OnionCustomMessageDecodingError, OnionCustomMessage, JM_MESSAGE_TYPES,
+    OnionPeer, OnionDirectoryPeerNotFound)
 from electrum.plugins.joinmarket.jmdaemon.onionmc_support import (
     TorClientService)
 
@@ -71,6 +72,9 @@ class OnionBaseTestCase(JMTestCase):
 
     async def on_pubkey(self, pubkey):
         print("received pubkey: " + pubkey)
+
+    async def on_nick_leave(self, nick, msgchan):
+        print('simulated on_nick_leave', nick, msgchan)
 
     async def junk_pubmsgs(self, mc):
         # start a raw IRCMessageChannel instance in a thread;
@@ -137,6 +141,7 @@ class OnionBaseTestCase(JMTestCase):
         mc.on_connect = self.on_connect
         mc.on_disconnect = self.on_disconnect
         mc.on_welcome = self.on_welcome
+        mc.on_nick_leave = self.on_nick_leave
         for p in self.mc.peers:
             p.connect()
             p._status = PEER_STATUS_HANDSHAKED
@@ -163,6 +168,19 @@ class OnionCustomMessageTestCase(OnionBaseTestCase):
             b'{"line": "dummymsg", "type": 1}')
         assert msg.text == 'dummymsg'
         assert msg.msgtype == 1
+
+
+class OnionLineProtocolTestCase(OnionBaseTestCase):
+
+    async def test_connection_lost(self):
+        protocol = self.peer.reconnecting_service.protocol
+        protocol.connection_lost(Exception('dummy connection lost'))
+
+    async def test_line_received(self):
+        protocol = self.peer.reconnecting_service.protocol
+        protocol.line_received(
+            b'{"line": "dummymsg", "type": 1}')
+        protocol.line_received(b'dummymsg')
 
 
 class OnionClientFactoryTestCase(OnionBaseTestCase):
@@ -242,3 +260,74 @@ class OnionPeerTestCase(OnionBaseTestCase):
     async def test_notify_message_unsendable(self):
         peer = self.peer
         peer.notify_message_unsendable()
+
+
+class OnionMessageChannelTestCase(OnionBaseTestCase):
+
+    async def test_info_callback(self):
+        self.mc.info_callback('dummymsg')
+
+    async def test_setup_error_callback(self):
+        self.mc.setup_error_callback('dummymsg')
+
+    async def test_shutdown_callback(self):
+        self.mc.shutdown_callback('dummymsg')
+
+    async def test_get_pubmsg(self):
+        assert self.mc.get_pubmsg('dummymsg', 'dummynick') == (
+            'dummynick!PUBLICdummymsg')
+
+    async def test_get_privmsg(self):
+        assert self.mc.get_privmsg(
+            'dummynick', 'cmd', 'dummymsg', 'dummy2') == (
+                'dummy2!dummynick!cmd dummymsg')
+
+    async def test_pubmsg(self):
+        await self.mc._pubmsg('dummymsg')
+
+    async def test_should_try_to_connect(self):
+        assert not self.mc.should_try_to_connect(None)
+        mc = self.mc
+        peer = OnionPeer(mc, mc.socks5_host, mc.socks5_port,
+                         (NOT_SERVING_ONION_HOSTNAME, -1), False, 'dummynick')
+        assert not self.mc.should_try_to_connect(peer)
+        peer = OnionPeer(mc, mc.socks5_host, mc.socks5_port,
+                         ('host', 5222), True, 'dummynick')
+        assert not self.mc.should_try_to_connect(peer)
+        assert not self.mc.should_try_to_connect(mc.self_as_peer)
+        peer = OnionPeer(mc, mc.socks5_host, mc.socks5_port,
+                         ('host', 5222), False, 'dummynick')
+        peer._status = PEER_STATUS_HANDSHAKED
+        assert not self.mc.should_try_to_connect(peer)
+        peer._status = PEER_STATUS_UNCONNECTED
+        assert self.mc.should_try_to_connect(peer)
+
+    async def test_privmsg(self):
+        await self.mc._privmsg('dummynick', 'cmd', 'dummymsg')
+
+    async def test_announce_orders(self):
+        await self.mc._announce_orders(['a', 'b', 'c'])
+
+    async def test_get_directory_for_nick(self):
+        mc = self.mc
+        dummynick = 'dummynick'
+        with self.assertRaises(OnionDirectoryPeerNotFound):
+            mc.get_directory_for_nick(dummynick)
+        mc.active_directories[dummynick] = {}
+        with self.assertRaises(OnionDirectoryPeerNotFound):
+            mc.get_directory_for_nick(dummynick)
+        mc.active_directories[dummynick][self.peer] = False
+        with self.assertRaises(OnionDirectoryPeerNotFound):
+            mc.get_directory_for_nick(dummynick)
+        mc.active_directories[dummynick][self.peer] = True
+        assert mc.get_directory_for_nick(dummynick) == self.peer
+
+    async def test_on_nick_leave_directory(self):
+        mc = self.mc
+        dp = self.peer
+        dummynick = 'dummynick'
+        assert not await mc.on_nick_leave_directory(dummynick, dp)
+        mc.active_directories[dummynick] = {}
+        assert not await mc.on_nick_leave_directory(dummynick, dp)
+        mc.active_directories[dummynick][self.peer] = True
+        await mc.on_nick_leave_directory(dummynick, dp)

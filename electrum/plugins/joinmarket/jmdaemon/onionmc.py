@@ -250,7 +250,7 @@ class OnionPeer:
                  location_tuple: Tuple[str, int],
                  directory: bool = False, nick: str = "",
                  handshake_callback: Callable = None):
-        self.client_service_cls = TorClientService
+        self.client_service_cls = messagechannel.client_service_cls
         # reference to the managing OnionMessageChannel instance is
         # needed so that we know where to send the messages received
         # from this peer:
@@ -556,7 +556,8 @@ class OnionMessageChannel(MessageChannel):
     dynamically from messages seen.
     """
 
-    def __init__(self, jmman, configdata):
+    def __init__(self, jmman, configdata, client_service_cls=TorClientService):
+        self.client_service_cls = client_service_cls
         self.jmman = jmman
         self.logger = jmman.logger
         MessageChannel.__init__(self)

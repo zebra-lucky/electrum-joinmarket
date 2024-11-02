@@ -9,7 +9,7 @@ from electrum.plugins.joinmarket.jmdaemon import (
 from electrum.plugins.joinmarket.jmdaemon.onionmc import (
     PEER_STATUS_UNCONNECTED, PEER_STATUS_CONNECTED, PEER_STATUS_HANDSHAKED,
     PEER_STATUS_DISCONNECTED, NOT_SERVING_ONION_HOSTNAME, OnionPeerError,
-    OnionCustomMessage, JM_MESSAGE_TYPES)
+    OnionCustomMessageDecodingError, OnionCustomMessage, JM_MESSAGE_TYPES)
 from electrum.plugins.joinmarket.jmdaemon.onionmc_support import (
     TorClientService)
 
@@ -152,6 +152,36 @@ class OnionBaseTestCase(JMTestCase):
             await m.shutdown()
 
         await cb(self.mc)
+
+
+class OnionCustomMessageTestCase(OnionBaseTestCase):
+
+    async def test_from_string_decode(self):
+        with self.assertRaises(OnionCustomMessageDecodingError):
+            OnionCustomMessage.from_string_decode(b'')
+        msg = OnionCustomMessage.from_string_decode(
+            b'{"line": "dummymsg", "type": 1}')
+        assert msg.text == 'dummymsg'
+        assert msg.msgtype == 1
+
+
+class OnionClientFactoryTestCase(OnionBaseTestCase):
+
+    async def test_register_disconnection(self):
+        peer = self.peer
+        factory = peer.factory
+        factory.register_disconnection(peer.reconnecting_service.protocol)
+
+    async def test_send(self):
+        factory = self.peer.factory
+        msg = OnionCustomMessage('dummymsg', JM_MESSAGE_TYPES["pubmsg"])
+        assert factory.send(msg)
+
+    async def test_receive_message(self):
+        peer = self.peer
+        factory = peer.factory
+        msg = OnionCustomMessage('dummymsg', JM_MESSAGE_TYPES["pubmsg"])
+        factory.receive_message(msg, peer.reconnecting_service.protocol)
 
 
 class OnionPeerTestCase(OnionBaseTestCase):

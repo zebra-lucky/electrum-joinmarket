@@ -77,12 +77,12 @@ class DummyMC(IRCMessageChannel):
             wlog(self.logger, 'error in buildirc: ' + repr(e))
 
 
-class IRCMessageChannelTestCase(JMTestCase):
+class IRCBaseTestCase(JMTestCase):
 
-    def on_connect(self, x):
+    async def on_connect(self, x):
         print('simulated on-connect', x)
 
-    def on_welcome(self, mc):
+    async def on_welcome(self, mc):
         print('simulated on-welcome', mc)
         mc.tx_irc_client.lineRate = 0.2
         if mc.nick == "irc_publisher":
@@ -91,14 +91,14 @@ class IRCMessageChannelTestCase(JMTestCase):
             d.addCallback(self.junk_announce)
             d.addCallback(self.junk_fill)
 
-    def on_disconnect(self, x):
+    async def on_disconnect(self, x):
         print('simulated on-disconnect', x)
 
     def on_order_seen(self, dummy, counterparty, oid, ordertype, minsize,
                       maxsize, txfee, cjfee):
         self.yg_name = counterparty
 
-    def on_pubkey(self, pubkey):
+    async def on_pubkey(self, pubkey):
         print("received pubkey: " + pubkey)
 
     async def junk_pubmsgs(self, mc):
@@ -171,7 +171,9 @@ class IRCMessageChannelTestCase(JMTestCase):
         self.mc, self.mcc = self.getmc("irc_publisher")
         self.mc2, self.mcc2 = self.getmc("irc_receiver")
         await self.mcc.run()
+        self.irc = self.mc.tx_irc_client
         await self.mcc2.run()
+        self.irc2 = self.mc2.tx_irc_client
 
         async def cb(m):
             # don't try to reconnect
@@ -180,6 +182,9 @@ class IRCMessageChannelTestCase(JMTestCase):
 
         self.addCleanup(cb, self.mc)
         self.addCleanup(cb, self.mc2)
+
+
+class IRCMessageChannelTestCase(IRCBaseTestCase):
 
     async def test_wlog(self):
         l = self.logger
@@ -215,3 +220,29 @@ class IRCMessageChannelTestCase(JMTestCase):
 
     async def test_announce_orders(self):
         await self.mc._announce_orders(["!abc def gh 0001"]*30)
+
+
+class txIRC_ClientTestCase(IRCBaseTestCase):
+
+    async def test_connection_lost(self):
+        self.irc.connection_lost('test reason')
+
+    async def test_privmsg(self):
+        self.irc._privmsg('dummynick', "fill", "0 10000000 abcdef")
+        self.irc._privmsg('dummynick', "fill", 'msg'*500)
+
+    async def test_signedOn(self):
+        self.irc.signedOn()
+
+    async def test_joined(self):
+        await self.irc.joined('dummy')
+
+    async def test_handle_privmsg(self):
+        to_nick = 'irc_publisher'
+        to_chan = '#joinmarket-pit-test'
+        self.irc.handle_privmsg('@dummy1!', '@dummy2!', 'badcmd')
+        self.irc.handle_privmsg('@dummy1!', to_nick, 'badcmd')
+        self.irc.handle_privmsg('@dummy1!', to_nick, '!fill 123')
+        self.irc.handle_privmsg('@dummy1!', to_nick, '!fill 123;')
+        self.irc.handle_privmsg('@dummy1!', to_nick, '!fill 123~')
+        self.irc.handle_privmsg('@dummy1!', to_chan, '!fill 123~')
